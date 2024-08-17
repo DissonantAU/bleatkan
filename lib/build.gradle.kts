@@ -23,7 +23,6 @@ dependencies {
     val versionKtor:String by project
     val versionCoroutines:String by project
     val versionLog4j:String by project
-    val versionTouchportal:String by project
     val versionJUnit:String by project
     val versionJUnitPlatformLauncher:String by project
     val versionKotlinxSerializationJson:String by project
@@ -73,34 +72,22 @@ dependencies {
 
 }
 
-
-tasks.named<Test>("test") {
+tasks.test {
     useJUnitPlatform()
 }
 
 
-if (JavaVersion.current().isJava8Compatible) {
-    tasks.withType<GroovyCompile>().configureEach { options.compilerArgs.addAll(arrayOf("Xdoclint:none", "-quiet")) }
-}
-
-if (JavaVersion.current().isJava9Compatible) {
-    tasks.withType<GroovyCompile>().configureEach { options.compilerArgs.addAll(arrayOf("--release", "8")) }
-}
-
 kotlin {
     jvmToolchain(8)
+
+    compilerOptions { javaParameters = true }
 }
 
-//tasks.withType<KotlinCompile> {
-//    compilerOptions {
-//        jvmTarget = JvmTarget.JVM_1_8
-//    }
-//}
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
 
-//java {
-//    sourceCompatibility = JavaVersion.VERSION_1_8
-//    targetCompatibility = JavaVersion.VERSION_1_8
-//}
 
 tasks.withType<Jar> {
     archiveBaseName.set(rootProject.name)
