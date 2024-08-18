@@ -1,16 +1,14 @@
+@file:Suppress("MemberVisibilityCanBePrivate", "unused")
+
 package xyz.dissonant.veadotube.bleatkan.serializable
 
+import io.ktor.util.*
 import kotlinx.serialization.*
-
 import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.json.JsonContentPolymorphicSerializer
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonObject
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.descriptors.*
-import kotlinx.serialization.encoding.Encoder
+
 
 
 object VtResultMessageSerializer : JsonContentPolymorphicSerializer<VtResultMessage>(VtResultMessage::class) {
@@ -40,26 +38,6 @@ object VtResultPayloadSerializer : JsonContentPolymorphicSerializer<VtResultPayl
     }
 }
 
-@OptIn(ExperimentalEncodingApi::class)
-object ByteArrayAsBase64Serializer : KSerializer<ByteArray> {
-    private val base64 = Base64.Default
-
-    override val descriptor: SerialDescriptor
-        get() = PrimitiveSerialDescriptor(
-            "ByteArrayAsBase64Serializer",
-            PrimitiveKind.STRING
-        )
-
-    override fun serialize(encoder: Encoder, value: ByteArray) {
-        val base64Encoded = base64.encode(value)
-        encoder.encodeString(base64Encoded)
-    }
-
-    override fun deserialize(decoder: Decoder): ByteArray {
-        val base64Decoded = decoder.decodeString()
-        return base64.decode(base64Decoded)
-    }
-}
 
 /* Data Objects */
 @Serializable(VtResultMessageSerializer::class)
@@ -83,6 +61,7 @@ sealed class VtResultMessage {
     ) : VtResultMessage()
 
 }
+
 
 @Serializable(VtResultPayloadSerializer::class)
 sealed class VtResultPayload {
@@ -110,13 +89,11 @@ sealed class VtResultPayload {
         val width: Int,
         val height: Int,
         /**
-         * PNG Encoded as a Byte Array
-         * Decoded to a byte Array from Base64 String when received
+         * PNG Encoded as a Base64 Encoded String
          *
-         * @see pngAsString to get PNG as Base64 String
+         * @see pngAsBytes to get PNG as a decoded ByteArray
          */
-        @Serializable(with = ByteArrayAsBase64Serializer::class)
-        val png: ByteArray
+        val png: String
     ) : VtResultPayload() {
 
         override fun equals(other: Any?): Boolean {
@@ -139,24 +116,32 @@ sealed class VtResultPayload {
             result = 31 * result + state.hashCode()
             result = 31 * result + width
             result = 31 * result + height
-            result = 31 * result + png.contentHashCode()
+            result = 31 * result + png.hashCode()
             return result
         }
 
         /**
-         * Encodes png as String, similar to how it's sent over Websocket
+         * Encodes PNG as Base64 Encoded String
          * @return PNG encoded as a Base64 String
          */
-        @OptIn(ExperimentalEncodingApi::class)
         fun pngAsString(): String {
-            return Base64.Default.encode(png)
+            return png
+        }
+
+        /**
+         * Returns a copy of the PNG Byte Array
+         * @return PNG as a Byte Array
+         */
+        fun pngAsBytes(): ByteArray {
+            return png.decodeBase64Bytes()
         }
 
         override fun toString(): String {
-            return "VTResultSEThumbPayload(event='$event', state='$state', width=$width, height=$height, png={hash=${png.contentHashCode()}, count=${png.count()}})"
+            return "VTResultSEThumbPayload(event='$event', state='$state', width=$width, height=$height, png={hash=${png.hashCode()}, count=${png.count()}})"
         }
     }
 }
+
 
 @Serializable
 data class State(
@@ -164,11 +149,10 @@ data class State(
     val name: String
 )
 
+
 @Serializable
 data class Entry(
     val type: String,
     val id: String,
     val name: String
 )
-
-
