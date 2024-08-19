@@ -10,7 +10,7 @@ import xyz.dissonant.veadotube.bleatkan.serializable.VtResultMessage
 
 import java.util.concurrent.ConcurrentHashMap
 
-class TestReceiver : IInstancesReceiver, IConnectionReceiver {
+class TestReceiver : InstancesReceiver, ConnectionReceiver {
 
     private val logger = KotlinLogging.logger {}
 

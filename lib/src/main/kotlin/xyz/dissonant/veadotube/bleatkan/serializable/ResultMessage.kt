@@ -42,14 +42,19 @@ object VtResultPayloadSerializer : JsonContentPolymorphicSerializer<VtResultPayl
 /* Data Objects */
 @Serializable(VtResultMessageSerializer::class)
 sealed class VtResultMessage {
+    /** Event - e.g. list, payload */
     abstract val event: String
 
     @Serializable
     data class VtResultMessagePayload(
         override val event: String,
+        /** Type - e.g. stateEvents */
         val type: String,
+        /** ID - e.g. mini */
         val id: String,
+        /** Name - e.g. avatar state */
         val name: String,
+
         val payload: VtResultPayload
     ) : VtResultMessage()
 

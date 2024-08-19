@@ -14,7 +14,7 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.*
 
-import xyz.dissonant.veadotube.bleatkan.Client
+import xyz.dissonant.veadotube.bleatkan.Client as VtClient
 import xyz.dissonant.veadotube.bleatkan.instance.Instance
 import xyz.dissonant.veadotube.bleatkan.serializable.*
 
@@ -37,9 +37,11 @@ import kotlin.collections.HashMap
  * @see java.net.URI
  * @see xyz.dissonant.veadotube.bleatkan.instance.InstanceID
  */
-class Connection(
+
+class Connection
+@JvmOverloads constructor(
     instance: Instance,
-    receiver: IConnectionReceiver,
+    receiver: ConnectionReceiver,
     name: String? = null,
     connectionJobParent: Job = Job(connectionDefaultJobParent)
 ) : AutoCloseable {
@@ -92,7 +94,7 @@ class Connection(
 
     private val logger = KotlinLogging.logger {}
 
-    private val connectionReceiver: IConnectionReceiver = receiver
+    private val connectionReceiver: ConnectionReceiver = receiver
 
     /**
      * Instance this Connection is connected to
@@ -150,12 +152,12 @@ class Connection(
     /**
      * Mutex for HttpClient Creation/Removal
      */
-    private var clientMutex: Mutex = Mutex()
+    private var httpClientMutex: Mutex = Mutex()
 
     /**
      * HttpClient that creates Websocket Sessions, etc.
      */
-    private var client: HttpClient? = null
+    private var httpClient: HttpClient? = null
 
     /**
      * WebSocket Session
@@ -170,7 +172,7 @@ class Connection(
      Not really implemented here, exists in BleatCan but not used by anything right now
      */
 
-    private val clientsMap: HashMap<String, HashSet<Client>> = HashMap()
+    private val clientsMap: HashMap<String, HashSet<VtClient>> = HashMap()
     private var clientsActive = false
 
     /* End Client Vars */
@@ -256,16 +258,16 @@ class Connection(
         runBlocking {
             //Lock to prevent Concurrent Creation/Destruction
             logger.trace { "Connection Constructor: HTTPClient Mutex Locking" }
-            clientMutex.lock(this)
+            httpClientMutex.lock(this)
             logger.trace { "Connection Constructor: HTTPClient Mutex Locked" }
 
             //Client Setup
-            if (client?.isActive != true) {
-                client?.close()
-                client = null
+            if (httpClient?.isActive != true) {
+                httpClient?.close()
+                httpClient = null
 
 
-                client = HttpClient(CIO) {
+                httpClient = HttpClient(CIO) {
                     install(WebSockets) {
                         pingInterval = 4_000
                     }
@@ -278,7 +280,7 @@ class Connection(
                     install(Logging)
                 }
             }
-            clientMutex.unlock(this)
+            httpClientMutex.unlock(this)
             logger.trace { "Connection Constructor: HTTPClient Mutex Unlocked" }
         }
 
@@ -288,22 +290,22 @@ class Connection(
 
     private fun shutdownHttpClient() {
         logger.trace { "shutdownHttpClient(): HTTPClient Shutdown" }
-        if (client == null) return
+        if (httpClient == null) return
 
         runBlocking {
             //Lock to prevent Concurrent Creation/Destruction
             logger.trace { "shutdownHttpClient(): HTTPClient Mutex Locking" }
-            clientMutex.lock(this)
+            httpClientMutex.lock(this)
             logger.trace { "shutdownHttpClient(): HTTPClient Mutex Locked" }
 
             //Client Setup
-            if (client?.isActive != true) {
-                client?.close()
+            if (httpClient?.isActive != true) {
+                httpClient?.close()
 
-                client = null
+                httpClient = null
             }
 
-            clientMutex.unlock(this)
+            httpClientMutex.unlock(this)
             logger.trace { "shutdownHttpClient(): HTTPClient Mutex Unlocked" }
         }
         logger.trace { "shutdownHttpClient(): HTTPClient Shutdown Done" }
@@ -441,10 +443,10 @@ class Connection(
     // New Setup
     private suspend fun startWebsocketNew() {
         logger.trace { "startWebsocket: Connecting: $connUri (${connUri.host}, ${connUri.port}, ${connUri.rawPath}?${connUri.rawQuery})" }
-        check(client != null && client!!.isActive) { "HttpClient is not active" }
+        check(httpClient != null && httpClient!!.isActive) { "HttpClient is not active" }
         check(webSocketSession?.isActive != true) { "webSocketSession is already active and in use" }
 
-        client?.webSocket(
+        httpClient?.webSocket(
             host = connUri.host,
             port = connUri.port,
             path = "${connUri.rawPath}?${connUri.rawQuery}"
@@ -748,7 +750,7 @@ class Connection(
     }
 
     // Method to add or remove clients from channels
-    fun setClient(client: Client, active: Boolean) {
+    fun setClient(client: VtClient, active: Boolean) {
         synchronized(clientsMap) {
             if (active) {
                 // Passed Client to be activated
@@ -756,7 +758,7 @@ class Connection(
                     // For each channel in client channel list
                     // Get the HashSet against the Channel Name. If one doesn't exist, create a new one.
                     // Add Client to HashSet
-                    clientsMap.getOrDefault(channel, HashSet<Client>())
+                    clientsMap.getOrDefault(channel, HashSet<VtClient>())
                         .add(client)
                 }
                 //If clients are set to active, send Connect
@@ -767,7 +769,7 @@ class Connection(
                 // Passed Client to be deactivated
                 for (channel in client.channels) {
                     //Get Set against channel
-                    val set: HashSet<Client>? = clientsMap[channel]
+                    val set: HashSet<VtClient>? = clientsMap[channel]
                     if (set != null && set.remove(client) && set.isEmpty()) {
                         //if Set exists against channel, remove Client from set, and remove Set from Map if empty
                         clientsMap.remove(channel)
@@ -782,17 +784,17 @@ class Connection(
     }
 
     // Send message - Illegal State Exception if not active, Illegal Argument for Channel, ClosedSendChannelException if Channel is Closed other error if send fails
-    fun send(channel: String = "nodes", requestData: VtRequest, validateRequest: Boolean = false) {
+    fun send(channel: String = "nodes", requestData: RequestMessage, validateRequest: Boolean = false) {
         check(!isClosed) { "Connection is Closed" }
         check(activeLoop) { "Connection Websocket not active" }
         require(channel.isNotBlank()) { "Channel cannot be blank" }
         check(webSocketSession?.isActive ?: false) { "Connection Websocket Session is not active" }
-        if (validateRequest) require(VtRequest.validate(requestData)) { "Request is not valid" }
+        if (validateRequest) require(RequestMessage.validate(requestData)) { "Request is not valid" }
 
         runBlocking {
             try {
                 //Convert to String with Channel Prefix and Send
-                val dataAsString: String = "$channel:${Json.encodeToString(VtRequest.serializer(), requestData)}"
+                val dataAsString: String = "$channel:${Json.encodeToString(RequestMessage.serializer(), requestData)}"
                 logger.trace { "Sending message: '$dataAsString'" }
                 webSocketSession?.send(dataAsString)
             } catch (e: Exception) {

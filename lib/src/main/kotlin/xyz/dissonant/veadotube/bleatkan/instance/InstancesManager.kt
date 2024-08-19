@@ -19,14 +19,14 @@ import kotlin.io.path.name
 
 /**
  *
- *
  * Based on Instances.cs
  *
  * Based on [veadotube bleatcan (Commit b1d4f...)](https://gitlab.com/veadotube/bleatcan/-/tree/b1d4faf70138c1e839b449c3cf799b6fd59c837b/bleatcan)
  *
  */
-class InstancesManager(
-    receiver: IInstancesReceiver,
+class InstancesManager
+@JvmOverloads constructor(
+    receiver: InstancesReceiver,
     managerJobParent: Job? = null
 ) : AutoCloseable {
 
@@ -101,7 +101,7 @@ class InstancesManager(
     /** Mutex for Instances Map */
     private val instancesMapMutex = Mutex()
 
-    private val instanceEventReceiver: IInstancesReceiver = receiver
+    private val instanceEventReceiver: InstancesReceiver = receiver
 
 
     /** Watcher is set to active when loop is enabled, and loop will run while it's true */
@@ -143,7 +143,7 @@ class InstancesManager(
 
             val instanceID: InstanceID = InstanceID(eventFilename)
 
-            //Get Contents of file - Supress Warning, this is called from the Dispatcher.IO Context already
+            //Get Contents of file - Suppress Warning, this is called from the Dispatcher.IO Context already
             @Suppress("BlockingMethodInNonBlockingContext")
             val contents = FileInputStream(eventPath.toFile()).bufferedReader()
                 .use { it.readText() }.trim()

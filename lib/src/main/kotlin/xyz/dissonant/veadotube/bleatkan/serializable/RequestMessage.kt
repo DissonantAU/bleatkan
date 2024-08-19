@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonObject
 
 
+
 // Enum for Known Message Events
 enum class MessageEvent(val value: String) {
     UNKNOWN("UNKNOWN"),
@@ -145,25 +146,25 @@ enum class PayloadEvent(val value: String) {
 }
 
 
-object VtRequestMessageSerializer : JsonContentPolymorphicSerializer<VtRequest>(VtRequest::class) {
-    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<VtRequest> {
+object VtRequestMessageSerializer : JsonContentPolymorphicSerializer<RequestMessage>(RequestMessage::class) {
+    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<RequestMessage> {
         val jsonObject = element.jsonObject
         return when {
-            jsonObject["event"]?.equals("list") ?: false -> VtRequest.VtRequestNodeList.serializer()
-            jsonObject.containsKey("payload") -> VtRequest.VtRequestNodeMessage.serializer()
+            jsonObject["event"]?.equals("list") ?: false -> RequestMessage.RequestMessageNodeList.serializer()
+            jsonObject.containsKey("payload") -> RequestMessage.RequestMessageNodeEvent.serializer()
             else -> throw IllegalArgumentException("Unsupported request type")
         }
     }
 }
 
 
-object VtRequestPayloadSerializer : JsonContentPolymorphicSerializer<VtRequestPayload>(VtRequestPayload::class) {
-    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<VtRequestPayload> {
+object VtRequestPayloadSerializer : JsonContentPolymorphicSerializer<RequestPayload>(RequestPayload::class) {
+    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<RequestPayload> {
         val jsonObject = element.jsonObject
         return when {
-            jsonObject.containsKey("token") -> VtRequestPayload.VTRequestPayloadEventToken.serializer()
-            jsonObject.containsKey("state") -> VtRequestPayload.VTRequestPayloadEventState.serializer()
-            jsonObject.containsKey("event") -> VtRequestPayload.VtRequestPayloadEvent.serializer()
+            jsonObject.containsKey("token") -> RequestPayload.RequestPayloadEventToken.serializer()
+            jsonObject.containsKey("state") -> RequestPayload.RequestPayloadEventState.serializer()
+            jsonObject.containsKey("event") -> RequestPayload.RequestPayloadEvent.serializer()
             else -> throw IllegalArgumentException("Unsupported Payload type")
         }
     }
@@ -178,33 +179,33 @@ object VtRequestPayloadSerializer : JsonContentPolymorphicSerializer<VtRequestPa
  * Common Reusable/Immutable Request and Payload Objects can be gotten from the Factory.
  * These objects are Lazy Initialised, and are also returned by build functions when possible
  */
-class VtRequestFactory {
+class VtRequest {
 
     @Suppress("unused")
     companion object FACTORY {
         /* Common Requests that can be reused - using lays initialisation to only create when first accessed*/
         /** Request of *event: list* - Lazy Initialized equivalent of *[requestPayloadEventList] as VtRequest* */
         @JvmStatic
-        val requestEventList: VtRequest by lazy {
-            VtRequest.VtRequestNodeList(event = MessageEvent.LIST.value)
+        val requestEventList: RequestMessage by lazy {
+            RequestMessage.RequestMessageNodeList(event = MessageEvent.LIST.value)
         }
 
         /* Common Request Payloads that can be reused - using lays initialisation to only create when first accessed*/
         /** Request Payload of *event: list* */
         @JvmStatic
-        val requestPayloadEventList: VtRequestPayload by lazy {
-            VtRequestPayload.VtRequestPayloadEvent(event = PayloadEvent.LIST.value)
+        val requestPayloadEventList: RequestPayload by lazy {
+            RequestPayload.RequestPayloadEvent(event = PayloadEvent.LIST.value)
         }
 
         /** Request Payload of *event: peek* */
         @JvmStatic
-        val requestPayloadEventPeek: VtRequestPayload by lazy {
-            VtRequestPayload.VtRequestPayloadEvent(event = PayloadEvent.PEEK.value)
+        val requestPayloadEventPeek: RequestPayload by lazy {
+            RequestPayload.RequestPayloadEvent(event = PayloadEvent.PEEK.value)
         }
 
 
         /**
-         * Returns a Request [VtRequest] with a Set State Payload [VtRequestPayload]
+         * Returns a Request [RequestMessage] with a Set State Payload [RequestPayload]
          *
          * Convenience Function to build a Set Avatar State Request
          *
@@ -238,7 +239,7 @@ class VtRequestFactory {
 
 
         /**
-         * Returns a Request [VtRequest] with a Push State Payload[VtRequestPayload]
+         * Returns a Request [RequestMessage] with a Push State Payload[RequestPayload]
          *
          * Convenience Function to build a Push Avatar State Request
          *
@@ -272,7 +273,7 @@ class VtRequestFactory {
 
 
         /**
-         * Returns a Request [VtRequest] with a Pop State Payload [VtRequestPayload]
+         * Returns a Request [RequestMessage] with a Pop State Payload [RequestPayload]
          *
          * Convenience Function to build a Pop Avatar State Request
          *
@@ -306,7 +307,7 @@ class VtRequestFactory {
 
 
         /**
-         * Returns a Request [VtRequest] with a Listen State Payload [VtRequestPayload]
+         * Returns a Request [RequestMessage] with a Listen State Payload [RequestPayload]
          *
          * Convenience Function to build a Listen Avatar State Request
          *
@@ -342,7 +343,7 @@ class VtRequestFactory {
 
 
         /**
-         * Returns a Request [VtRequest] with an Unlisten State Payload [VtRequestPayload]
+         * Returns a Request [RequestMessage] with an Unlisten State Payload [RequestPayload]
          *
          * Convenience Function to build an Unlisten Avatar State Request
          *
@@ -378,7 +379,7 @@ class VtRequestFactory {
 
 
         /**
-         * Returns a Request [VtRequest] with a Thumbnail State Payload [VtRequestPayload]
+         * Returns a Request [RequestMessage] with a Thumbnail State Payload [RequestPayload]
          *
          * Convenience Function to build a Thumbnail Avatar State Request
          *
@@ -424,7 +425,7 @@ class VtRequestFactory {
          * @see requestPayloadEventList
          * */
         @JvmStatic
-        val requestListMiniState: VtRequest by lazy {
+        val requestListMiniState: RequestMessage by lazy {
             buildRequest(payload = requestPayloadEventList)
         }
 
@@ -442,31 +443,31 @@ class VtRequestFactory {
          * @see requestPayloadEventPeek
          * */
         @JvmStatic
-        val requestPeekStateMini: VtRequest by lazy {
+        val requestPeekStateMini: RequestMessage by lazy {
             buildRequest(payload = requestPayloadEventPeek)
         }
 
 
         /* Builders */
         /**
-         * Returns a Request that inherits [VtRequest]
+         * Returns a Request that inherits [RequestMessage]
          *
          * Common Uses:
          *
          * [event] = [MessageEvent.LIST]
          * * Doesn't require any other parameters, anything provided will be ignored.
-         * * Returns [VtRequestFactory.requestEventList] - it can be accessed directly, and should be used instead if possible
-         * * (See [VtRequestPayload.VtRequestPayloadEvent])
+         * * Returns [VtRequest.requestEventList] - it can be accessed directly, and should be used instead if possible
+         * * (See [RequestPayload.RequestPayloadEvent])
          *
          *
          * [event] = [MessageEvent.PAYLOAD]
          * * Uses [type], [id], and [payload] must be provided
          * * All must be non-blank and non-null.
-         * * (See [VtRequestPayload.VTRequestPayloadEventToken])
+         * * (See [RequestPayload.RequestPayloadEventToken])
          *
          *
-         * @see [VtRequestPayload.VtRequestPayloadEvent]
-         * @see [VtRequestPayload.VTRequestPayloadEventToken]
+         * @see [RequestPayload.RequestPayloadEvent]
+         * @see [RequestPayload.RequestPayloadEventToken]
          *
          */
         @JvmOverloads
@@ -475,9 +476,9 @@ class VtRequestFactory {
             event: MessageEvent = MessageEvent.PAYLOAD,
             type: MessagePayloadType? = MessagePayloadType.STATE_EVENTS,
             id: MessagePayloadId? = MessagePayloadId.MINI,
-            payload: VtRequestPayload? = null
-        ): VtRequest {
-            val newRequest: VtRequest = when (event) {
+            payload: RequestPayload? = null
+        ): RequestMessage {
+            val newRequest: RequestMessage = when (event) {
                 /* List as base event is just a payload an Event Payload */
                 MessageEvent.LIST -> {
                     /*Return Common/Reusable Object*/
@@ -491,7 +492,7 @@ class VtRequestFactory {
                             require(id != null) { "Type cannot be Null for Request ${MessageEvent.PAYLOAD} with Type ${MessagePayloadType.STATE_EVENTS}" }
                             require(payload != null) { "Payload cannot be Null for Request ${MessageEvent.PAYLOAD} with Type ${MessagePayloadType.STATE_EVENTS}" }
 
-                            VtRequest.VtRequestNodeMessage(
+                            RequestMessage.RequestMessageNodeEvent(
                                 event = event.value,
                                 type = type.value,
                                 id = id.value,
@@ -521,43 +522,43 @@ class VtRequestFactory {
 
 
         /**
-         * Returns a Payload that inherits [VtRequestPayload]
+         * Returns a Payload that inherits [RequestPayload]
          *
          *
          * [event] = [PayloadEvent.LIST] or [PayloadEvent.PEEK]
          * * Doesn't require [value], anything provided will be ignored.
          * * A [PayloadEvent.LIST] Payload can also be sent without being put into a Request to get a list of nodes.
-         * * Returns [VtRequestFactory.requestPayloadEventList] or [VtRequestFactory.requestPayloadEventPeek] respectively
+         * * Returns [VtRequest.requestPayloadEventList] or [VtRequest.requestPayloadEventPeek] respectively
          * - they can be accessed directly, and should be used instead if possible
-         * * (See [VtRequestPayload.VtRequestPayloadEvent])
+         * * (See [RequestPayload.RequestPayloadEvent])
          *
          *
          * [event] = [PayloadEvent.LISTEN] & [PayloadEvent.UNLISTEN]
          * * Uses [value] as the Token.
          * * Must be non-blank and non-null.
-         * * (See [VtRequestPayload.VTRequestPayloadEventToken])
+         * * (See [RequestPayload.RequestPayloadEventToken])
          *
          *
          * [event] = [PayloadEvent.SET], [PayloadEvent.PUSH], [PayloadEvent.POP], & [PayloadEvent.THUMB]
          * * Uses [value] as the State ID.
          * * Should be a valid State ID from a [MessageEvent.PAYLOAD] / [MessagePayloadType.STATE_EVENTS] / [PayloadEvent.LIST] request.
-         * * (See [VtRequestPayload.VTRequestPayloadEventState])
+         * * (See [RequestPayload.RequestPayloadEventState])
          *
          *
          * @param event event value, should match [PayloadEvent] (except [PayloadEvent.UNKNOWN])
          *
          *
-         * @see [VtRequestPayload.VtRequestPayloadEvent]
-         * @see [VtRequestPayload.VTRequestPayloadEventToken]
+         * @see [RequestPayload.RequestPayloadEvent]
+         * @see [RequestPayload.RequestPayloadEventToken]
          *
          */
         @JvmOverloads
         @JvmStatic
-        fun buildPayload(event: PayloadEvent, value: String? = null): VtRequestPayload {
+        fun buildPayload(event: PayloadEvent, value: String? = null): RequestPayload {
             require(event != PayloadEvent.UNKNOWN) { "Payload Event can't be UNKNOWN" }
 
 
-            val newRequest: VtRequestPayload =
+            val newRequest: RequestPayload =
 
                 when (event) {
 
@@ -573,7 +574,7 @@ class VtRequestFactory {
 
                     PayloadEvent.LISTEN, PayloadEvent.UNLISTEN -> {
                         require(!value.isNullOrBlank()) { "Token Value for Payload $event Event can't be Null or Blank" }
-                        VtRequestPayload.VTRequestPayloadEventToken(
+                        RequestPayload.RequestPayloadEventToken(
                             event = event.value,
                             token = value.trim()
                         )
@@ -581,7 +582,7 @@ class VtRequestFactory {
 
                     PayloadEvent.SET, PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB -> {
                         require(!value.isNullOrBlank()) { "State Value for Payload $event Event can't be Null or Blank" }
-                        VtRequestPayload.VTRequestPayloadEventState(
+                        RequestPayload.RequestPayloadEventState(
                             event = event.value,
                             state = value.trim()
                         )
@@ -598,7 +599,7 @@ class VtRequestFactory {
 
 
         /**
-         * Returns a Request that inherits [VtRequest] with a Payload
+         * Returns a Request that inherits [RequestMessage] with a Payload
          *
          * Convenience Function to combine [buildRequest] and [buildPayload]
          *
@@ -607,18 +608,18 @@ class VtRequestFactory {
          *
          * [event] = [MessageEvent.LIST]
          * * Doesn't require any other parameters, anything provided will be ignored.
-         * * Returns [VtRequestFactory.requestEventList] - it can be accessed directly, and should be used instead if possible
-         * * (See [VtRequestPayload.VtRequestPayloadEvent])
+         * * Returns [VtRequest.requestEventList] - it can be accessed directly, and should be used instead if possible
+         * * (See [RequestPayload.RequestPayloadEvent])
          *
          *
          * [event] = [MessageEvent.PAYLOAD]
          * * Uses [type], [id], can be provided while [payloadEvent] must be provided, along with [payloadValue] if it's needed
          * * All must be non-blank and non-null.
-         * * (See [VtRequestPayload.VTRequestPayloadEventToken])
+         * * (See [RequestPayload.RequestPayloadEventToken])
          *
          *
-         * @see [VtRequestPayload.VtRequestPayloadEvent]
-         * @see [VtRequestPayload.VTRequestPayloadEventToken]
+         * @see [RequestPayload.RequestPayloadEvent]
+         * @see [RequestPayload.RequestPayloadEventToken]
          * @see [buildRequest]
          *
          */
@@ -639,9 +640,33 @@ class VtRequestFactory {
             )
         )
 
+    }
+
+    data class Builder(
+        var event: MessageEvent = MessageEvent.PAYLOAD,
+        var type: MessagePayloadType = MessagePayloadType.STATE_EVENTS,
+        var id: MessagePayloadId = MessagePayloadId.MINI,
+        var payload: RequestPayload = buildPayload(
+            event = PayloadEvent.PEEK
+        )
+    ) {
+        fun event(event: MessageEvent) = apply { this.event = event }
+        fun type(type: MessagePayloadType) = apply { this.type = type}
+        fun id(id: MessagePayloadId) = apply { this.id = id }
+        fun payload(payload: RequestPayload) = apply { this.payload = payload }
+
+        fun build() = buildRequest(
+            event = event,
+            type = type,
+            id = id,
+            payload = payload
+        )
 
     }
+
 }
+
+
 
 /**
  * Class used to represent Veadotube Request Messages.
@@ -651,19 +676,19 @@ class VtRequestFactory {
  * Must always have an [event] value at minimum
  */
 @Serializable(VtRequestMessageSerializer::class)
-sealed class VtRequest {
+sealed class RequestMessage {
     abstract val event: String
 
     /**
      * Message for Listing Nodes
      */
     @Serializable
-    data class VtRequestNodeList(
+    data class RequestMessageNodeList(
         override val event: String
-    ) : VtRequest()
+    ) : RequestMessage()
 
     @Serializable
-    data class VtRequestNodeMessage(
+    data class RequestMessageNodeEvent(
         override val event: String,
         /**
          * Node Type to send the request to
@@ -680,8 +705,8 @@ sealed class VtRequest {
         /**
          * Payload to send to node [type] / [id]
          */
-        val payload: VtRequestPayload
-    ) : VtRequest()
+        val payload: RequestPayload
+    ) : RequestMessage()
 
     fun toJsonString(): String {
         return Json.encodeToString(this)
@@ -695,22 +720,22 @@ sealed class VtRequest {
          *
          * If the Request is a Payload, it will also be validated
          *
-         * @param requestData data object inheriting [VtRequest]
+         * @param requestData data object inheriting [RequestMessage]
          *
          * @return true if tests passed
          * @throws IllegalStateException if any invalid value is found. Message contains details of issues
          *
-         * @see VtRequestPayload.validate Use to validate Payload Contents if applicable
+         * @see RequestPayload.validate Use to validate Payload Contents if applicable
          */
         @Throws(IllegalStateException::class)
         @JvmStatic
-        fun validate(requestData: VtRequest): Boolean {
+        fun validate(requestData: RequestMessage): Boolean {
             val errorSb by lazy { StringBuilder().append { "Request: " } }
             var valid = true
 
             when {
                 /* Check vs Type Block Start */
-                (requestData is VtRequestNodeList) -> {
+                (requestData is RequestMessageNodeList) -> {
                     /* Check VtRequestNodeList Block Start */
                     when (MessageEvent.fromValue(requestData.event)) {
                         MessageEvent.LIST -> {/*Valid, no more to do */
@@ -724,7 +749,7 @@ sealed class VtRequest {
                     /* Check VtRequestNodeList Block End */
                 }
 
-                (requestData is VtRequestNodeMessage) -> {
+                (requestData is RequestMessageNodeEvent) -> {
                     /* Check VtRequestNodeMessage Block Start */
                     when (MessageEvent.fromValue(requestData.event)) {
                         MessageEvent.PAYLOAD -> {
@@ -753,7 +778,7 @@ sealed class VtRequest {
 
                             /*Payload Check*/
                             try {
-                                VtRequestPayload.validate(requestData.payload)
+                                RequestPayload.validate(requestData.payload)
                             } catch (ex: Exception) {
                                 valid = false
                                 errorSb.append { ex.message }
@@ -787,17 +812,16 @@ sealed class VtRequest {
         }
     }
 
-
 }
 
 
 /**
- * Class used to restrict what can be a payload for [VtRequest.VtRequestNodeMessage.payload]
+ * Class used to restrict what can be a payload for [RequestMessage.RequestMessageNodeEvent.payload]
  *
  * Must always have an [event] value at minimum
  */
 @Serializable(VtRequestPayloadSerializer::class)
-sealed class VtRequestPayload {
+sealed class RequestPayload {
     abstract val event: String
 
     /**
@@ -808,9 +832,9 @@ sealed class VtRequestPayload {
      * e.g. [PayloadEvent.LIST] (*list*) will return the possible state values, [PayloadEvent.PEEK] (*peek*) will return the current state value
      */
     @Serializable
-    class VtRequestPayloadEvent(
+    class RequestPayloadEvent(
         override val event: String
-    ) : VtRequestPayload()
+    ) : RequestPayload()
 
     /**
      * Used for Request Payloads that need a token, usually Listeners
@@ -824,14 +848,14 @@ sealed class VtRequestPayload {
      * e.g. a [PayloadEvent.LISTEN] (*Listen*) Request using token '*abc123*' can be removed later by sending a [PayloadEvent.UNLISTEN] (*Unlisten*) Request with the same token
      */
     @Serializable
-    data class VTRequestPayloadEventToken(
+    data class RequestPayloadEventToken(
         override val event: String,
         /**
          * Unique ID for the listener - can be anything
          * Token sent for UnListen must be the same as original Listen Request
          */
         val token: String
-    ) : VtRequestPayload()
+    ) : RequestPayload()
 
     /**
      * Used for Request Payloads that need a state, e.g. Set/Push/Pop/Thumb
@@ -845,7 +869,7 @@ sealed class VtRequestPayload {
      * i.e. the State IF from a [MessageEvent.PAYLOAD] / [MessagePayloadType.STATE_EVENTS] / [PayloadEvent.LIST] request
      */
     @Serializable
-    data class VTRequestPayloadEventState(
+    data class RequestPayloadEventState(
         override val event: String,
         /**
          * Unique ID for the State
@@ -853,7 +877,7 @@ sealed class VtRequestPayload {
          * i.e. the state id from a [MessageEvent.PAYLOAD] / [MessagePayloadType.STATE_EVENTS] / [PayloadEvent.LIST] request
          */
         val state: String
-    ) : VtRequestPayload()
+    ) : RequestPayload()
 
     fun toJsonString(): String {
         return Json.encodeToString(this)
@@ -867,19 +891,19 @@ sealed class VtRequestPayload {
          *
          * Dynamic values like Token/State are only checked to make sure they are not Blank
          *
-         * @param payloadData data object inheriting [VtRequestPayload]
+         * @param payloadData data object inheriting [RequestPayload]
          *
          * @return true if tests passed
          * @throws IllegalStateException if any invalid value is found. Message contains details of issues
          */
         @Throws(IllegalStateException::class)
         @JvmStatic
-        fun validate(payloadData: VtRequestPayload): Boolean {
+        fun validate(payloadData: RequestPayload): Boolean {
             val errorSb by lazy { StringBuilder().append { "Payload: " } }
             var valid = true
 
             when {
-                (payloadData is VtRequestPayloadEvent) -> {
+                (payloadData is RequestPayloadEvent) -> {
                     /* Check VtRequestPayloadEvent Block Start */
                     when (PayloadEvent.fromValue(payloadData.event)) {
                         PayloadEvent.LIST, PayloadEvent.PEEK -> {/* Valid, no more to do */
@@ -893,7 +917,7 @@ sealed class VtRequestPayload {
                     /* Check VtRequestPayloadEvent Block End */
                 }
 
-                (payloadData is VTRequestPayloadEventToken) -> {
+                (payloadData is RequestPayloadEventToken) -> {
                     /* Check VTRequestPayloadEventToken Block Start */
                     when (PayloadEvent.fromValue(payloadData.event)) {
                         PayloadEvent.LISTEN, PayloadEvent.UNLISTEN -> {
@@ -912,7 +936,7 @@ sealed class VtRequestPayload {
                     /* Check VTRequestPayloadEventToken Block End */
                 }
 
-                (payloadData is VTRequestPayloadEventState) -> {
+                (payloadData is RequestPayloadEventState) -> {
                     /* Check VTRequestPayloadEventState Block Start */
                     when (PayloadEvent.fromValue(payloadData.event)) {
                         PayloadEvent.SET, PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB -> {
