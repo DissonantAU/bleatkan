@@ -16,7 +16,7 @@ class TestReceiver : InstancesReceiver, ConnectionReceiver {
 
     private val instanceMap = ConcurrentHashMap<InstanceID, Instance>()
 
-    private val connectionMap = ConcurrentHashMap<String, Connection>()
+    //private val connectionMap = ConcurrentHashMap<String, Connection>()
 
         fun getInstances(): Map<InstanceID, Instance> {
         return instanceMap.toMap()

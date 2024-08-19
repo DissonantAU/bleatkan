@@ -401,7 +401,7 @@ class InstancesManager
      * Returns [Instance] Object from Map that matches [InstanceID] Object
      */
     fun getInstance(id: InstanceID): Instance? {
-        var inst : Instance? = null;
+        var inst : Instance? = null
         runBlocking {
             instancesMapMutex.withLock {
                 inst= instancesMap[id]
