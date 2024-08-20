@@ -30,9 +30,11 @@ class InstancesManager
     managerJobParent: Job? = null
 ) : AutoCloseable {
 
-    private val logger = KotlinLogging.logger {}
+
 
     companion object {
+        private val LOGGER = KotlinLogging.logger {}
+
         /** Timestamp Timeout in Seconds - File with an older than 10s is considered out of date, possibly dead. */
         const val READ_TIMEOUT_SEC: Long = 10
 
@@ -49,13 +51,12 @@ class InstancesManager
         private val dirInstances: Path
 
         init {
-            val logger = KotlinLogging.logger {}
 
             val dirHomeFolder: String = System.getProperty("user.home")
-            logger.info { "Dir: Home Folder = '$dirHomeFolder'" }
+            LOGGER.info { "Dir: Home Folder = '$dirHomeFolder'" }
 
             val dirVeadotubeInstances = Paths.get(dirHomeFolder, ".veadotube", "instances")
-            logger.info { "Dir: Veadotube Instances Folder = '$dirVeadotubeInstances'" }
+            LOGGER.info { "Dir: Veadotube Instances Folder = '$dirVeadotubeInstances'" }
 
             // If it doesn't exist, create
             if (!dirVeadotubeInstances.toFile().isDirectory) {
@@ -115,17 +116,17 @@ class InstancesManager
 
 
     init {
-        logger.trace { "Instance Manager Starting" }
+        LOGGER.trace { "Instance Manager Starting" }
         watcherActive = true
 
         instMgrScope.launch {
-            logger.trace { "Launching DirectoryWatcher Job" }
+            LOGGER.trace { "Launching DirectoryWatcher Job" }
             watcherJob = launch { runDirectoryWatcherLoop() }
-            logger.trace { "Launching InstanceChecker Job" }
+            LOGGER.trace { "Launching InstanceChecker Job" }
             checkerJob = launch { runInstanceCheckerLoop() }
         }.invokeOnCompletion { close() }
 
-        logger.trace { "Instance Manager Started" }
+        LOGGER.trace { "Instance Manager Started" }
     }
 
 
@@ -139,7 +140,7 @@ class InstancesManager
         val eventFilename = eventPath.name
 
         try {
-            logger.trace { "processInstanceFile: File Name > $eventFilename > Full Path: $eventPath" }
+            LOGGER.trace { "processInstanceFile: File Name > $eventFilename > Full Path: $eventPath" }
 
             val instanceID: InstanceID = InstanceID(eventFilename)
 
@@ -148,7 +149,7 @@ class InstancesManager
             val contents = FileInputStream(eventPath.toFile()).bufferedReader()
                 .use { it.readText() }.trim()
 
-            logger.trace { "processInstanceFile: Done reading $eventFilename" }
+            LOGGER.trace { "processInstanceFile: Done reading $eventFilename" }
 
 
             try {
@@ -164,9 +165,9 @@ class InstancesManager
                     check(vtInstance.name.isNotBlank()) { "vtInstance missing name" }
                     check(vtInstance.server.isNotBlank()) { "vtInstance missing server" }
 
-                    logger.trace { "processInstanceFile: $eventFilename Json - $vtInstance" }
+                    LOGGER.trace { "processInstanceFile: $eventFilename Json - $vtInstance" }
 
-                    logger.trace { "processInstanceFile: Waiting for Sync on instancesMap for $eventFilename" }
+                    LOGGER.trace { "processInstanceFile: Waiting for Sync on instancesMap for $eventFilename" }
 
                     instancesMapMutex.withLock {
                         /* Sync Block Start */
@@ -185,49 +186,49 @@ class InstancesManager
                         //Check/Update values
                         if (!newInstance) {
                             //Existing instance - compare and update
-                            logger.trace { "processInstanceFile: $eventFilename existing instance - $existingInstance" }
+                            LOGGER.trace { "processInstanceFile: $eventFilename existing instance - $existingInstance" }
                             if (existingInstance.name != vtInstance.name || existingInstance.server != vtInstance.server) {
 
                                 //Important Value Changed, this should trigger a change event
                                 if (existingInstance.name != vtInstance.name) {
-                                    logger.trace { "processInstanceFile: name change ${existingInstance.name} -> ${vtInstance.name} " }
+                                    LOGGER.trace { "processInstanceFile: name change ${existingInstance.name} -> ${vtInstance.name} " }
                                 }
 
                                 if (existingInstance.server != vtInstance.server) {
-                                    logger.trace { "processInstanceFile: server change ${existingInstance.server} -> ${vtInstance.server} " }
+                                    LOGGER.trace { "processInstanceFile: server change ${existingInstance.server} -> ${vtInstance.server} " }
 
                                 }
                                 val newInstanceObj = Instance(instanceID, vtInstance.name, vtInstance.server,vtInstance.time)
                                 instancesMap[instanceID] = newInstanceObj
 
-                                logger.debug { "processInstanceFile: Existing instance updated - $existingInstance" }
+                                LOGGER.debug { "processInstanceFile: Existing instance updated - $existingInstance" }
 
                                 instanceEventReceiver.onChange(newInstanceObj,existingInstance)
                             }
                         } else {
-                            logger.trace { "processInstanceFile: $eventFilename new instance - $existingInstance" }
-                            logger.debug { "processInstanceFile: New instance added - $existingInstance" }
+                            LOGGER.trace { "processInstanceFile: $eventFilename new instance - $existingInstance" }
+                            LOGGER.debug { "processInstanceFile: New instance added - $existingInstance" }
                             instanceEventReceiver.onStart(existingInstance)
                         }
                     }
 
-                    logger.trace { "processInstanceFile: $eventFilename Json - $vtInstance" }
+                    LOGGER.trace { "processInstanceFile: $eventFilename Json - $vtInstance" }
                 }
             } catch (ex: SerializationException) {
                 /* Sometimes happens when the file happens to be read when it's still being written */
-                logger.debug { "processInstanceFile: $ex" }
-                logger.debug { "processInstanceFile: $eventFilename content - $contents" }
+                LOGGER.debug { "processInstanceFile: $ex" }
+                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents" }
             } catch (ex: IllegalArgumentException) {
                 // Not valid instance of VtInstance - could be a newer/non-mini version of Veadotube
-                logger.warn { "processInstanceFile: $ex" }
-                logger.debug { "processInstanceFile: $eventFilename content - $contents" }
+                LOGGER.warn { "processInstanceFile: $ex" }
+                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents" }
             }catch (ex:IllegalStateException ){
                 // Missing vtInstance value, etc.
-                logger.debug { "processInstanceFile: $ex" }
-                logger.debug { "processInstanceFile: $eventFilename content - $contents" }
+                LOGGER.debug { "processInstanceFile: $ex" }
+                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents" }
             }
         } catch (ex: IOException) {
-            logger.warn { "processInstanceFile: $ex" }
+            LOGGER.warn { "processInstanceFile: $ex" }
         }
     }
 
@@ -237,7 +238,7 @@ class InstancesManager
 
     private suspend fun runDirectoryWatcherLoop() {
         withContext(instanceReaderDispatcher) {
-            logger.trace { "DirectoryWatcher: coroutineScope Start" }
+            LOGGER.trace { "DirectoryWatcher: coroutineScope Start" }
 
             // Initial Directory check
             try {
@@ -250,7 +251,7 @@ class InstancesManager
                 }
             } catch (ex: Exception) {
                 // Log, but we can move on, as files will refresh regularly
-                logger.debug { "DirectoryWatcher: Error with initial File check: ${ex.message}" }
+                LOGGER.debug { "DirectoryWatcher: Error with initial File check: ${ex.message}" }
             }
 
 
@@ -259,12 +260,12 @@ class InstancesManager
                 dirInstances.register(instDirWatchService, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
 
             try {
-                logger.trace { "DirectoryWatcher: Watcher Loop Start" }
+                LOGGER.trace { "DirectoryWatcher: Watcher Loop Start" }
                 while (watcherActive && isActive) {
                     val loopStartTime = Instant.now().epochSecond
                     val instDirLoopKey: WatchKey = withContext(instanceReaderDispatcher) { instDirWatchService.take() }
 
-                    logger.trace { "DirectoryWatcher: Polling File Events" }
+                    LOGGER.trace { "DirectoryWatcher: Polling File Events" }
                     //Poll for changes in instances folder - does not block if not files found
                     instDirLoopKey.pollEvents()
                         .filter { event -> event.kind() !== OVERFLOW }
@@ -275,10 +276,10 @@ class InstancesManager
 
                             if (event.kind() === ENTRY_DELETE) {
                                 // We won't do anything, there's a timeout for
-                                logger.trace { "DirectoryWatcher: File Deleted: ${eventPath.name}" }
+                                LOGGER.trace { "DirectoryWatcher: File Deleted: ${eventPath.name}" }
                             } else {
                                 // For 'Create' or 'Modify' Event - Launches coroutine to get and process for each file
-                                logger.trace { "DirectoryWatcher: File Created or Modified: ${eventFile.name}" }
+                                LOGGER.trace { "DirectoryWatcher: File Created or Modified: ${eventFile.name}" }
 
                                 //Process File
                                 processInstanceFileCreateModify(eventPath)
@@ -297,14 +298,14 @@ class InstancesManager
                         (delayTimeMSec < READ_LOOP_DELAY_MIN_MS) -> delayTimeMSec = READ_LOOP_DELAY_MIN_MS //min wait
                         (delayTimeMSec > READ_LOOP_DELAY_MAX_MS) -> delayTimeMSec = READ_LOOP_DELAY_MAX_MS //max wait
                     }
-                    logger.trace { "DirectoryWatcher: Loop took $loopTimeSeconds Seconds, Delaying ${delayTimeMSec / 1000f} Seconds before next check" }
+                    LOGGER.trace { "DirectoryWatcher: Loop took $loopTimeSeconds Seconds, Delaying ${delayTimeMSec / 1000f} Seconds before next check" }
                     delay(delayTimeMSec)
                 }
-                logger.trace { "DirectoryWatcher: Watcher Loop Ended" }
+                LOGGER.trace { "DirectoryWatcher: Watcher Loop Ended" }
             } catch (ex: ClosedWatchServiceException) {
-                logger.trace { "DirectoryWatcher: WatchService Closed with ${ex.message}" }
+                LOGGER.trace { "DirectoryWatcher: WatchService Closed with ${ex.message}" }
             } finally {
-                logger.trace { "DirectoryWatcher: Finally Cleanup" }
+                LOGGER.trace { "DirectoryWatcher: Finally Cleanup" }
                 watcherActive = false
 
                 //Cleanup
@@ -316,7 +317,7 @@ class InstancesManager
 
     private suspend fun runInstanceCheckerLoop() {
         withContext(instanceCheckerDispatcher) {
-            logger.trace { "InstanceChecker: coroutineScope Start" }
+            LOGGER.trace { "InstanceChecker: coroutineScope Start" }
 
             val instancesToRemove = HashSet<Instance>()
 
@@ -329,11 +330,11 @@ class InstancesManager
 
                     instancesToRemove.clear()
 
-                    logger.trace { "InstanceChecker: Waiting for Sync on instancesMap" }
+                    LOGGER.trace { "InstanceChecker: Waiting for Sync on instancesMap" }
 
                     instancesMapMutex.withLock {
                         /* Sync Block Start */
-                        logger.trace { "InstanceChecker: Acquired Sync Lock on instancesMap" }
+                        LOGGER.trace { "InstanceChecker: Acquired Sync Lock on instancesMap" }
 
                         //Get Instances to Remove
                         for (instance in instancesMap.values) {
@@ -355,12 +356,12 @@ class InstancesManager
 
                     val loopEndTime = Instant.now().epochSecond
                     val loopTimeSeconds = loopEndTime - loopStartTime
-                    logger.trace { "InstanceChecker: Loop took $loopTimeSeconds Seconds, Delaying ${READ_LOOP_DELAY_MAX_MS / 1000f} Seconds before next check" }
+                    LOGGER.trace { "InstanceChecker: Loop took $loopTimeSeconds Seconds, Delaying ${READ_LOOP_DELAY_MAX_MS / 1000f} Seconds before next check" }
                 }
 
             } finally {
                 watcherActive = false
-                logger.trace { "InstanceChecker: Finally" }
+                LOGGER.trace { "InstanceChecker: Finally" }
                 //Cleanup
                 instancesMapMutex.withLock {
                     for (instance in instancesMap.values) {
@@ -375,16 +376,16 @@ class InstancesManager
 
 
     override fun close() {
-        logger.trace { "Instance Manager Closing" }
+        LOGGER.trace { "Instance Manager Closing" }
         watcherActive = false
         instMgrJob.complete()
 
         runBlocking {
-            logger.trace { "Launching DirectoryWatcher Job" }
+            LOGGER.trace { "Launching DirectoryWatcher Job" }
             runCatching { instDirWatchService.close() }
             watcherJob?.cancel("Instances Manager is Closing")
 
-            logger.trace { "Launching InstanceChecker Job" }
+            LOGGER.trace { "Launching InstanceChecker Job" }
             checkerJob?.cancel("Instances Manager is Closing")
 
             delay(50)
@@ -394,7 +395,7 @@ class InstancesManager
             }
         }
 
-        logger.trace { "Instance Manager Closed" }
+        LOGGER.trace { "Instance Manager Closed" }
     }
 
     /**

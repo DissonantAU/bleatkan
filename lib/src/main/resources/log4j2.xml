@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration name="VtPlugin" status="warn" monitorInterval="30">
+<Configuration name="BleatKan" status="warn" monitorInterval="30">
 
     <Properties>
         <Property name="LOG_DIR">logs</Property>
     </Properties>
 
     <Appenders>
+
         <Console name="console" target="SYSTEM_OUT">
             <PatternLayout
-                    pattern="%d{HH:mm:ss.SSS} [%t] %highlight{%level}{FATAL=bg_red, ERROR=red, WARN=yellow, INFO=green, DEBUG=blue} %logger{2} - %msg%n"/>
+                    pattern="%d{HH:mm:ss.SSS} [%t] %highlight{%level}{FATAL=bg_red, ERROR=red, WARN=yellow, INFO=green, DEBUG=blue} %logger{2} - %replace{%msg}{\r?\n}{ » }%n"/>
             <Filters>
                 <ThresholdFilter level="debug"/>
             </Filters>
@@ -19,9 +20,7 @@
                 fileName="${LOG_DIR}/application.log"
                 filePattern="${LOG_DIR}/application.%d{yyyy-MM-dd}.%i.log.gz"
                 ignoreExceptions="false">
-            <PatternLayout>
-                <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5p %logger{2} - %m%n</Pattern>
-            </PatternLayout>
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5p %logger{2} - %replace{%msg}{\r?\n}{ » }%n"/>
             <Filters>
                 <ThresholdFilter level="debug"/>
             </Filters>
@@ -38,6 +37,7 @@
         </RollingFile>
 
     </Appenders>
+
     <Loggers>
         <Root level="trace">
             <AppenderRef ref="console"/>
