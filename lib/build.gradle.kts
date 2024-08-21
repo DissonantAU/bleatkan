@@ -37,6 +37,7 @@ dependencies {
     //Websocket (and HTTP) Framework
     implementation("io.ktor:ktor-client-core:$versionKtor")// KTOR for Websockets
     implementation("io.ktor:ktor-client-websockets:$versionKtor")
+    implementation("io.ktor:ktor-client-logging:$versionKtor")
     // HTTP Engines - pick one
     implementation("io.ktor:ktor-client-cio:$versionKtor") // No HTTP/2 Support, fine for Veadotube Websockets
     //implementation("com.squareup.okhttp3:okhttp:4.12.0+") //Switching would need some changes in Connection.kt
@@ -47,8 +48,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization:$versionKtor")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$versionKtor")
 
-    // Logging
-    implementation("io.ktor:ktor-client-logging:$versionKtor")
+
+
 
     // Log4J
     implementation(platform("org.apache.logging.log4j:log4j-bom:$versionLog4j"))

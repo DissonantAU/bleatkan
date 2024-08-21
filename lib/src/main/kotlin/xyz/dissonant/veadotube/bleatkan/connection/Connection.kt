@@ -95,8 +95,6 @@ class Connection
     }
 
 
-
-
     private val connectionReceiver: ConnectionReceiver = receiver
 
     /**
@@ -201,7 +199,7 @@ class Connection
             this.instance.getWebSocketUri(this.name)
             connUri = Instance.getWebSocketUri(this.server, this.name)
         } catch (ex: IllegalArgumentException) {
-            receiver.onError(this, ConnectionError.InvalidServerOrName);
+            receiver.onError(this, ConnectionError.InvalidServerOrName)
             throw ex
         }
 
@@ -280,7 +278,7 @@ class Connection
                         endpoint.keepAliveTime = 12_000
                         endpoint.socketTimeout = 12_000
                     }
-                    install(Logging){
+                    install(Logging) {
                         logger = Logger.DEFAULT
                         level = if (LOGGER.isDebugEnabled()) LogLevel.INFO else LogLevel.NONE
                     }
@@ -341,7 +339,7 @@ class Connection
     private suspend fun runWebsocketWatcher() {
         LOGGER.trace { "runWebsocketWatcher: Started" }
 
-        var errorCount = 0;
+        var errorCount = 0
 
 
         while (activeLoop) {
@@ -378,12 +376,11 @@ class Connection
 
                 val closeReason = wsscr?.await()
 
-                if (closeReason?.knownReason == CloseReason.Codes.NORMAL || closeReason?.knownReason == CloseReason.Codes.GOING_AWAY){
+                if (closeReason?.knownReason == CloseReason.Codes.NORMAL || closeReason?.knownReason == CloseReason.Codes.GOING_AWAY) {
                     // Exception was thrown, but was closed normally from other side
                     LOGGER.trace { "runWebsocketWatcher: Closing > $closeReason" }
                     LOGGER.trace { "runWebsocketWatcher: Exception was thrown, but closure was normal ${ex.javaClass} - ${ex.message}" }
-                }else
-                {
+                } else {
                     errorCount++
 
                     LOGGER.error { "runWebsocketWatcher: Closing With Exception Reason: $closeReason" }
@@ -500,20 +497,18 @@ class Connection
             when (frame) {
 
                 is Frame.Text -> {
+                    //Should only receive Text/JSON, but processing is done using a Byte Array
                     val messageBytes = frame.readBytes()
                     LOGGER.trace { "runWebsocketReceiver: ${frame.frameType} Frame with ${frame.readBytes().size} Bytes" }
                     processReceivedMessage(messageBytes)
-                    //Alt:
-                    //val messageText = frame.readText()
-                    //val message = processReceivedMessage(messageText)
                 }
 
                 is Frame.Binary -> {
-                    // Should never happen with Veadotube, this would catch and log
+                    // Should never happen with Veadotube - catch and log
                     LOGGER.debug { "runWebsocketReceiver: ${frame.frameType} Frame with ${frame.readBytes().size} Bytes" }
                 }
 
-                is Frame.Close -> {
+                is Frame.Close, is Frame.Ping, is Frame.Pong -> {
                     // Should never happen without Raw Socket
                     LOGGER.debug { "runWebsocketReceiver: ${frame.frameType} Frame with ${frame.readBytes().size} Bytes" }
                 }
@@ -544,7 +539,7 @@ class Connection
 
         /* Basic Decode Block Start */
         // Gets Index of first colon (':') - text before this should represent the Veadotube Channel
-        val channelCharEnd = message.indexOf(COLON_BYTE);
+        val channelCharEnd = message.indexOf(COLON_BYTE)
         if (channelCharEnd < 0) {
             LOGGER.debug { "processReceivedMessage${message.hashCode()}: Message Missing 'channel:'" }
             return
@@ -605,7 +600,7 @@ class Connection
 
         /* Basic Decode Block Start */
         // Gets Index of first colon (':') - text before this should represent the Veadotube Channel
-        val channelCharEnd = message.indexOf(COLON_CHAR);
+        val channelCharEnd = message.indexOf(COLON_CHAR)
         if (channelCharEnd < 0) {
             LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Message Missing 'channel:'" }
             return
@@ -614,7 +609,7 @@ class Connection
         // If message starts with 'nodes:' (or any other channel prefix) we need to get it
         // Only 'nodes' exists as a channel for now in veadotube mini, but this could change
         val channel = try {
-            message.substring(0, channelCharEnd);
+            message.substring(0, channelCharEnd)
         } catch (ex: Exception) {
             LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error extracting Channel: ${ex.message}" }
             return
@@ -720,7 +715,7 @@ class Connection
         return jsonVtMessage
     }
 
-    private suspend fun passReceivedToClients(channel: String, data: VtResultMessage) {
+    private fun passReceivedToClients(channel: String, data: VtResultMessage) {
 
         connectionReceiver.onReceive(this, channel, data)
 
@@ -730,7 +725,7 @@ class Connection
 
     }
 
-    private suspend fun updateClients(isConnected: Boolean) {
+    private fun updateClients(isConnected: Boolean) {
         synchronized(clientsMap) {
             clientsActive = isConnected
             clientsMap.values.stream().flatMap { it.stream() }
@@ -800,7 +795,7 @@ class Connection
         runBlocking {
             try {
                 //Convert to String with Channel Prefix and Send
-                val dataAsString: String = "$channel:${Json.encodeToString(RequestMessage.serializer(), requestData)}"
+                val dataAsString = "$channel:${Json.encodeToString(RequestMessage.serializer(), requestData)}"
                 LOGGER.trace { "Sending message: '$dataAsString'" }
                 webSocketSession?.send(dataAsString)
             } catch (e: Exception) {
