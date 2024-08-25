@@ -48,10 +48,8 @@ class Connection
 
     companion object {
 
-        private const val NULL_CHAR: Char = '\u0000'
         private const val NULL_BYTE: Byte = 0
-
-        private const val COLON_CHAR = ':'
+        
         private const val COLON_BYTE = ':'.code.toByte()
 
         /**
@@ -592,67 +590,6 @@ class Connection
         //Pass Decoded Message to connectionReceiver, clients
         passReceivedToClients(channel, messageObj)
 
-    }
-
-    //Receive Func
-    private fun processReceivedMessage(message: String) {
-        LOGGER.debug { "processReceivedMessage ${message.hashCode()}: String to Process:\n$message." }
-
-        /* Basic Decode Block Start */
-        // Gets Index of first colon (':') - text before this should represent the Veadotube Channel
-        val channelCharEnd = message.indexOf(COLON_CHAR)
-        if (channelCharEnd < 0) {
-            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Message Missing 'channel:'" }
-            return
-        } // not found, invalid message
-
-        // If message starts with 'nodes:' (or any other channel prefix) we need to get it
-        // Only 'nodes' exists as a channel for now in veadotube mini, but this could change
-        val channel = try {
-            message.substring(0, channelCharEnd)
-        } catch (ex: Exception) {
-            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error extracting Channel: ${ex.message}" }
-            return
-        }
-        if (channel.isBlank()) {
-            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Message Missing Channel" }
-            return
-        }
-
-        // We need to remove null chars from end of message to process further
-        // we can just grab everything after the channel to the first null char
-        val nullCharIndex = message.indexOf(NULL_CHAR)
-        val textTrimIndex = if (nullCharIndex >= 0) {
-            LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Culling Nulls after $nullCharIndex" }
-            nullCharIndex
-        } else {
-            LOGGER.trace { "processReceivedMessage ${message.hashCode()}: No Nulls to Cull" }
-            message.length
-        }
-
-        //Extract JSON
-        val textCleaned = try {
-            message.substring(channelCharEnd + 1, textTrimIndex)
-        } catch (ex: Exception) {
-            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error extracting JSON: ${ex.message}" }
-            return
-        }
-
-        LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Final Processed Message:\nChannel: $channel\nJSON: $textCleaned" }
-        /* Basic Decode Block End */
-
-        // Decode to Object
-        val messageObj: VtResultMessage = try {
-            convertMessage(textCleaned)
-        } catch (ex: Exception) {
-            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error Decoding JSON: ${ex.message}" }
-            return
-        }
-        LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Decoded Message:\nVtResultMessage - ${messageObj.javaClass}\n$messageObj" }
-
-
-
-        return
     }
 
 
