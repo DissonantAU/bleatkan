@@ -18,18 +18,16 @@ import kotlin.io.path.name
 
 
 /**
- *
  * Based on Instances.cs
  *
  * Based on [veadotube bleatcan (Commit b1d4f...)](https://gitlab.com/veadotube/bleatcan/-/tree/b1d4faf70138c1e839b449c3cf799b6fd59c837b/bleatcan)
- *
  */
+@Suppress("unused")
 class InstancesManager
 @JvmOverloads constructor(
     receiver: InstancesReceiver,
     managerJobParent: Job? = null
 ) : AutoCloseable {
-
 
 
     companion object {
@@ -142,7 +140,7 @@ class InstancesManager
         try {
             LOGGER.trace { "processInstanceFile: File Name > $eventFilename > Full Path: $eventPath" }
 
-            val instanceID: InstanceID = InstanceID(eventFilename)
+            val instanceID = InstanceID(eventFilename)
 
             //Get Contents of file - Suppress Warning, this is called from the Dispatcher.IO Context already
             @Suppress("BlockingMethodInNonBlockingContext")
@@ -374,7 +372,6 @@ class InstancesManager
         }
     }
 
-
     override fun close() {
         LOGGER.trace { "Instance Manager Closing" }
         watcherActive = false
@@ -402,10 +399,10 @@ class InstancesManager
      * Returns [Instance] Object from Map that matches [InstanceID] Object
      */
     fun getInstance(id: InstanceID): Instance? {
-        var inst : Instance? = null
+        var inst : Instance?
         runBlocking {
             instancesMapMutex.withLock {
-                inst= instancesMap[id]
+                inst = instancesMap[id]
             }
         }
 

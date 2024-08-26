@@ -100,8 +100,15 @@ class Connection
      */
     val instance: Instance
 
-    val server: String = instance.server!!
-    val name: String = name ?: instance.name!!
+    /**
+     * Server this Connection is connected to
+     */
+    val server: String = instance.server
+
+    /**
+     * Name of Instance this Connection is connected to
+     */
+    val name: String = name ?: instance.name
 
     /**
      * Connection URI
@@ -532,7 +539,7 @@ class Connection
     }
 
 
-    private suspend fun processReceivedMessage(message: ByteArray) {
+    private fun processReceivedMessage(message: ByteArray) {
         LOGGER.debug { "processReceivedMessage ${message.hashCode()}: ByteArray to Process: ${message.size} Bytes" }
 
         /* Basic Decode Block Start */
@@ -741,6 +748,30 @@ class Connection
                 throw e
             }
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Connection
+
+        if (connectionTimeMillis != other.connectionTimeMillis) return false
+        if (id != other.id) return false
+        if (instance.id != other.instance.id) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = connectionTimeMillis.hashCode()
+        result = 31 * result + id.hashCode()
+        result = 31 * result + instance.id.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "Connection(instance=${instance.id}, id='$id', connectionTimeMillis=$connectionTimeMillis)"
     }
 
 }
