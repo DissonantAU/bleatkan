@@ -18,26 +18,61 @@ import kotlinx.serialization.json.Json
 class VtRequest {
 
     companion object FACTORY {
-        /* Common Requests that can be reused - using lays initialisation to only create when first accessed*/
-        /** Request of *event: list* - Lazy Initialized equivalent of *[requestPayloadEventList] as VtRequest* */
+
+        /* Common Requests that can be reused - using lazy initialisation to only create when first accessed */
+        /** Request of *event: list* - Lazy Initialized equivalent of *[getPayloadEventList] as VtRequest* */
         @JvmStatic
-        val requestEventList: RequestMessage by lazy {
+        val getEventList: RequestMessage by lazy {
             RequestMessage.RequestMessageNodeList(event = MessageEvent.LIST.value)
         }
 
-        /* Common Request Payloads that can be reused - using lays initialisation to only create when first accessed*/
         /** Request Payload of *event: list* */
         @JvmStatic
-        val requestPayloadEventList: RequestPayload by lazy {
+        val getPayloadEventList: RequestPayload by lazy {
             RequestPayload.RequestPayloadEvent(event = PayloadEvent.LIST.value)
         }
 
         /** Request Payload of *event: peek* */
         @JvmStatic
-        val requestPayloadEventPeek: RequestPayload by lazy {
+        val getPayloadEventPeek: RequestPayload by lazy {
             RequestPayload.RequestPayloadEvent(event = PayloadEvent.PEEK.value)
         }
 
+        /** Common Prebuilt Request to get Avatar State List from Veadotube Mini
+         *
+         * Equivalent of
+         * createRequest(
+         *  event = [MessageEvent.PAYLOAD],
+         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  id = [MessagePayloadId.MINI],
+         *  payload = [getPayloadEventList]
+         * )
+         *
+         * @see createRequest
+         * @see getPayloadEventList
+         * */
+        @JvmStatic
+        val getListStateMini: RequestMessage by lazy {
+            createRequest(payload = getPayloadEventList)
+        }
+
+        /** Common Prebuilt Request to get (peek) the current Avatar State from Veadotube Mini
+         *
+         * Equivalent of
+         * createRequest(
+         *  event = [MessageEvent.PAYLOAD],
+         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  id = [MessagePayloadId.MINI],
+         *  payload = [getPayloadEventPeek]
+         * )
+         *
+         * @see createRequest
+         * @see getPayloadEventPeek
+         * */
+        @JvmStatic
+        val getPeekStateMini: RequestMessage by lazy {
+            createRequest(payload = getPayloadEventPeek)
+        }
 
         /**
          * Returns a Request [RequestMessage] with a Set State Payload [RequestPayload]
@@ -45,33 +80,32 @@ class VtRequest {
          * Convenience Function to build a Set Avatar State Request
          *
          * Equivalent of
-         * buildRequest(
+         * createRequest(
          *  event = [MessageEvent.PAYLOAD],
          *  type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI],
-         *  payload = buildPayload(
+         *  payload = createPayload(
          *   event = [PayloadEvent.SET],
          *   value = [stateID]
          *  )
          * )
          *
-         * @see buildRequest
-         * @see buildPayload
+         * @see createRequest
+         * @see createPayload
          *
          */
         @JvmStatic
-        fun buildRequestSetMiniState(
+        fun createSetStateMini(
             stateID: String
-        ) = buildRequest(
+        ) = createRequest(
             event = MessageEvent.PAYLOAD,
             type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI,
-            payload = buildPayload(
+            payload = createPayload(
                 event = PayloadEvent.SET,
                 value = stateID
             )
         )
-
 
         /**
          * Returns a Request [RequestMessage] with a Push State Payload[RequestPayload]
@@ -79,33 +113,32 @@ class VtRequest {
          * Convenience Function to build a Push Avatar State Request
          *
          * Equivalent of
-         * buildRequest(
+         * createRequest(
          *  event = [MessageEvent.PAYLOAD],
          *  type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI],
-         *  payload = buildPayload(
+         *  payload = createPayload(
          *   event = [PayloadEvent.PUSH],
          *   value = [stateID]
          *  )
          * )
          *
-         * @see buildRequest
-         * @see buildPayload
+         * @see createRequest
+         * @see createPayload
          *
          */
         @JvmStatic
-        fun buildRequestPushMiniState(
+        fun createPushStateMini(
             stateID: String
-        ) = buildRequest(
+        ) = createRequest(
             event = MessageEvent.PAYLOAD,
             type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI,
-            payload = buildPayload(
+            payload = createPayload(
                 event = PayloadEvent.PUSH,
                 value = stateID
             )
         )
-
 
         /**
          * Returns a Request [RequestMessage] with a Pop State Payload [RequestPayload]
@@ -113,33 +146,32 @@ class VtRequest {
          * Convenience Function to build a Pop Avatar State Request
          *
          * Equivalent of
-         * buildRequest(
+         * createRequest(
          *  event = [MessageEvent.PAYLOAD],
          *  type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI],
-         *  payload = buildPayload(
+         *  payload = createPayload(
          *   event = [PayloadEvent.POP],
          *   value = [stateID]
          *  )
          * )
          *
-         * @see buildRequest
-         * @see buildPayload
+         * @see createRequest
+         * @see createPayload
          *
          */
         @JvmStatic
-        fun buildRequestPopMiniState(
+        fun createPopStateMini(
             stateID: String
-        ) = buildRequest(
+        ) = createRequest(
             event = MessageEvent.PAYLOAD,
             type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI,
-            payload = buildPayload(
+            payload = createPayload(
                 event = PayloadEvent.POP,
                 value = stateID
             )
         )
-
 
         /**
          * Returns a Request [RequestMessage] with a Listen State Payload [RequestPayload]
@@ -147,11 +179,11 @@ class VtRequest {
          * Convenience Function to build a Listen Avatar State Request
          *
          * Equivalent of
-         * buildRequest(
+         * createRequest(
          *  event = [MessageEvent.PAYLOAD],
          *  type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI],
-         *  payload = buildPayload(
+         *  payload = createPayload(
          *   event = [PayloadEvent.LISTEN],
          *   value = [stateID]
          *  )
@@ -159,23 +191,22 @@ class VtRequest {
          *
          * @param stateID Avatar State ID
          *
-         * @see buildRequest
-         * @see buildPayload
+         * @see createRequest
+         * @see createPayload
          *
          */
         @JvmStatic
-        fun buildRequestListenMiniState(
+        fun createListenStateMini(
             stateID: String
-        ) = buildRequest(
+        ) = createRequest(
             event = MessageEvent.PAYLOAD,
             type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI,
-            payload = buildPayload(
+            payload = createPayload(
                 event = PayloadEvent.LISTEN,
                 value = stateID
             )
         )
-
 
         /**
          * Returns a Request [RequestMessage] with an Unlisten State Payload [RequestPayload]
@@ -183,11 +214,11 @@ class VtRequest {
          * Convenience Function to build an Unlisten Avatar State Request
          *
          * Equivalent of
-         * buildRequest(
+         * createRequest(
          *  event = [MessageEvent.PAYLOAD],
          *  type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI],
-         *  payload = buildPayload(
+         *  payload = createPayload(
          *   event = [PayloadEvent.UNLISTEN],
          *   value = [stateID]
          *  )
@@ -195,18 +226,18 @@ class VtRequest {
          *
          * @param stateID Avatar State ID
          *
-         * @see buildRequest
-         * @see buildPayload
+         * @see createRequest
+         * @see createPayload
          *
          */
         @JvmStatic
-        fun buildRequestUnlistenMiniState(
+        fun createUnlistenStateMini(
             stateID: String
-        ) = buildRequest(
+        ) = createRequest(
             event = MessageEvent.PAYLOAD,
             type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI,
-            payload = buildPayload(
+            payload = createPayload(
                 event = PayloadEvent.UNLISTEN,
                 value = stateID
             )
@@ -219,71 +250,35 @@ class VtRequest {
          * Convenience Function to build a Thumbnail Avatar State Request
          *
          * Equivalent of
-         * buildRequest(
+         * createRequest(
          *  event = [MessageEvent.PAYLOAD],
          *  type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI],
-         *  payload = buildPayload(
+         *  payload = createPayload(
          *   event = [PayloadEvent.THUMB],
          *   value = [stateID]
          *  )
          * )
          *
-         * @see buildRequest
-         * @see buildPayload
+         * @see createRequest
+         * @see createPayload
          *
          */
         @JvmStatic
-        fun buildRequestThumbMiniState(
+        fun createThumbnailStateMini(
             stateID: String
-        ) = buildRequest(
+        ) = createRequest(
             event = MessageEvent.PAYLOAD,
             type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI,
-            payload = buildPayload(
+            payload = createPayload(
                 event = PayloadEvent.THUMB,
                 value = stateID
             )
         )
 
-        /** Common Prebuilt Request to get Avatar State List from Veadotube Mini
-         *
-         * Equivalent of
-         * buildRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
-         *  id = [MessagePayloadId.MINI],
-         *  payload = [requestPayloadEventList]
-         * )
-         *
-         * @see buildRequest
-         * @see requestPayloadEventList
-         * */
-        @JvmStatic
-        val requestListMiniState: RequestMessage by lazy {
-            buildRequest(payload = requestPayloadEventList)
-        }
 
-        /** Common Prebuilt Request to get (peek) the current Avatar State from Veadotube Mini
-         *
-         * Equivalent of
-         * buildRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
-         *  id = [MessagePayloadId.MINI],
-         *  payload = [requestPayloadEventPeek]
-         * )
-         *
-         * @see buildRequest
-         * @see requestPayloadEventPeek
-         * */
-        @JvmStatic
-        val requestPeekStateMini: RequestMessage by lazy {
-            buildRequest(payload = requestPayloadEventPeek)
-        }
-
-
-        /* Builders */
+        /* Builder Functions */
         /**
          * Returns a Request that inherits [RequestMessage]
          *
@@ -291,7 +286,7 @@ class VtRequest {
          *
          * [event] = [MessageEvent.LIST]
          * * Doesn't require any other parameters, anything provided will be ignored.
-         * * Returns [VtRequest.requestEventList] - it can be accessed directly, and should be used instead if possible
+         * * Returns [VtRequest.getEventList] - it can be accessed directly, and should be used instead if possible
          * * (See [RequestPayload.RequestPayloadEvent])
          *
          *
@@ -307,7 +302,7 @@ class VtRequest {
          */
         @JvmOverloads
         @JvmStatic
-        fun buildRequest(
+        fun createRequest(
             event: MessageEvent = MessageEvent.PAYLOAD,
             type: MessagePayloadType? = MessagePayloadType.STATE_EVENTS,
             id: MessagePayloadId? = MessagePayloadId.MINI,
@@ -317,7 +312,7 @@ class VtRequest {
                 /* List as base event is just a payload an Event Payload */
                 MessageEvent.LIST -> {
                     /*Return Common/Reusable Object*/
-                    requestEventList
+                    getEventList
                 }
 
                 MessageEvent.PAYLOAD -> {
@@ -363,7 +358,7 @@ class VtRequest {
          * [event] = [PayloadEvent.LIST] or [PayloadEvent.PEEK]
          * * Doesn't require [value], anything provided will be ignored.
          * * A [PayloadEvent.LIST] Payload can also be sent without being put into a Request to get a list of nodes.
-         * * Returns [VtRequest.requestPayloadEventList] or [VtRequest.requestPayloadEventPeek] respectively
+         * * Returns [VtRequest.getPayloadEventList] or [VtRequest.getPayloadEventPeek] respectively
          * - they can be accessed directly, and should be used instead if possible
          * * (See [RequestPayload.RequestPayloadEvent])
          *
@@ -389,7 +384,7 @@ class VtRequest {
          */
         @JvmOverloads
         @JvmStatic
-        fun buildPayload(event: PayloadEvent, value: String? = null): RequestPayload {
+        fun createPayload(event: PayloadEvent, value: String? = null): RequestPayload {
             require(event != PayloadEvent.UNKNOWN) { "Payload Event can't be UNKNOWN" }
 
 
@@ -399,12 +394,12 @@ class VtRequest {
 
                     PayloadEvent.LIST -> {
                         /*Return Common/Reusable Object*/
-                        requestPayloadEventList
+                        getPayloadEventList
                     }
 
                     PayloadEvent.PEEK -> {
                         /*Return Common/Reusable Object*/
-                        requestPayloadEventPeek
+                        getPayloadEventPeek
                     }
 
                     PayloadEvent.LISTEN, PayloadEvent.UNLISTEN -> {
@@ -436,14 +431,14 @@ class VtRequest {
         /**
          * Returns a Request that inherits [RequestMessage] with a Payload
          *
-         * Convenience Function to combine [buildRequest] and [buildPayload]
+         * Convenience Function to combine [createRequest] and [createPayload]
          *
          *
          * Common Uses:
          *
          * [event] = [MessageEvent.LIST]
          * * Doesn't require any other parameters, anything provided will be ignored.
-         * * Returns [VtRequest.requestEventList] - it can be accessed directly, and should be used instead if possible
+         * * Returns [VtRequest.getEventList] - it can be accessed directly, and should be used instead if possible
          * * (See [RequestPayload.RequestPayloadEvent])
          *
          *
@@ -455,46 +450,24 @@ class VtRequest {
          *
          * @see [RequestPayload.RequestPayloadEvent]
          * @see [RequestPayload.RequestPayloadEventToken]
-         * @see [buildRequest]
+         * @see [createRequest]
          *
          */
         @JvmOverloads
         @JvmStatic
-        fun buildRequestWithPayload(
+        fun createRequestWithPayload(
             event: MessageEvent = MessageEvent.PAYLOAD,
             type: MessagePayloadType? = MessagePayloadType.STATE_EVENTS,
             id: MessagePayloadId? = MessagePayloadId.MINI,
             payloadEvent: PayloadEvent, payloadValue: String? = null
-        ) = buildRequest(
+        ) = createRequest(
             event = event,
             type = type,
             id = id,
-            payload = buildPayload(
+            payload = createPayload(
                 event = payloadEvent,
                 value = payloadValue
             )
-        )
-
-    }
-
-    data class Builder(
-        var event: MessageEvent = MessageEvent.PAYLOAD,
-        var type: MessagePayloadType = MessagePayloadType.STATE_EVENTS,
-        var id: MessagePayloadId = MessagePayloadId.MINI,
-        var payload: RequestPayload = buildPayload(
-            event = PayloadEvent.PEEK
-        )
-    ) {
-        fun event(event: MessageEvent) = apply { this.event = event }
-        fun type(type: MessagePayloadType) = apply { this.type = type}
-        fun id(id: MessagePayloadId) = apply { this.id = id }
-        fun payload(payload: RequestPayload) = apply { this.payload = payload }
-
-        fun build() = buildRequest(
-            event = event,
-            type = type,
-            id = id,
-            payload = payload
         )
 
     }
