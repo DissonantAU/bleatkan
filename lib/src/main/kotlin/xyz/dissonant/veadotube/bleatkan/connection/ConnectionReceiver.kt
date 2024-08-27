@@ -1,6 +1,6 @@
 package xyz.dissonant.veadotube.bleatkan.connection
 
-import xyz.dissonant.veadotube.bleatkan.serializable.VtResultMessage
+import xyz.dissonant.veadotube.bleatkan.message.VtResultMessage
 
 interface ConnectionReceiver {
 

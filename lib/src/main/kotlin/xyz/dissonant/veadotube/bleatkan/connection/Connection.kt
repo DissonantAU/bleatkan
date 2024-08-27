@@ -16,7 +16,7 @@ import kotlinx.serialization.json.*
 
 import xyz.dissonant.veadotube.bleatkan.Client as VtClient
 import xyz.dissonant.veadotube.bleatkan.instance.Instance
-import xyz.dissonant.veadotube.bleatkan.serializable.*
+import xyz.dissonant.veadotube.bleatkan.message.*
 
 import java.net.URI
 import java.util.*

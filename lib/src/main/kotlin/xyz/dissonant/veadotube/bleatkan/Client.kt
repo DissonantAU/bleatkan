@@ -2,8 +2,8 @@ package xyz.dissonant.veadotube.bleatkan
 
 import xyz.dissonant.veadotube.bleatkan.connection.Connection
 
-import xyz.dissonant.veadotube.bleatkan.serializable.RequestMessage
-import xyz.dissonant.veadotube.bleatkan.serializable.VtResultMessage
+import xyz.dissonant.veadotube.bleatkan.message.RequestMessage
+import xyz.dissonant.veadotube.bleatkan.message.VtResultMessage
 
 import java.util.*
 

@@ -1,4 +1,4 @@
-package xyz.dissonant.veadotube.bleatkan.serializable
+package xyz.dissonant.veadotube.bleatkan.message
 
 
 import org.junit.jupiter.api.Test

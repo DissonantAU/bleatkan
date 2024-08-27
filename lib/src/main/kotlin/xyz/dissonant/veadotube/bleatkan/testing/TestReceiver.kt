@@ -5,7 +5,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import xyz.dissonant.veadotube.bleatkan.connection.*
 import xyz.dissonant.veadotube.bleatkan.instance.*
 
-import xyz.dissonant.veadotube.bleatkan.serializable.VtResultMessage
+import xyz.dissonant.veadotube.bleatkan.message.VtResultMessage
 
 
 import java.util.concurrent.ConcurrentHashMap

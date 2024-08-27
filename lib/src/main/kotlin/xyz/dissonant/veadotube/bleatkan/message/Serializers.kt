@@ -1,6 +1,6 @@
 @file:Suppress("MemberVisibilityCanBePrivate", "unused")
 
-package xyz.dissonant.veadotube.bleatkan.serializable
+package xyz.dissonant.veadotube.bleatkan.message
 
 import kotlinx.serialization.*
 
