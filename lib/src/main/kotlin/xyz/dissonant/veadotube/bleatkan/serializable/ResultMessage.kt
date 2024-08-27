@@ -4,39 +4,6 @@ package xyz.dissonant.veadotube.bleatkan.serializable
 
 import io.ktor.util.*
 import kotlinx.serialization.*
-import kotlinx.serialization.DeserializationStrategy
-import kotlinx.serialization.json.JsonContentPolymorphicSerializer
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonObject
-
-
-
-object VtResultMessageSerializer : JsonContentPolymorphicSerializer<VtResultMessage>(VtResultMessage::class) {
-    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<VtResultMessage> {
-        val jsonObject = element.jsonObject
-        return when {
-            jsonObject.containsKey("payload") -> VtResultMessage.VtResultMessagePayload.serializer()
-            jsonObject.containsKey("entries") -> VtResultMessage.VtResultMessageEntries.serializer()
-            else -> throw IllegalArgumentException("Unsupported Payload type")
-        }
-    }
-}
-
-
-object VtResultPayloadSerializer : JsonContentPolymorphicSerializer<VtResultPayload>(VtResultPayload::class) {
-    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<VtResultPayload> {
-        val jsonObject = element.jsonObject
-        return when {
-            jsonObject.containsKey("states") -> VtResultPayload.VTResultSEListPayload.serializer()
-            jsonObject.containsKey("state") -> when {
-                jsonObject.containsKey("png") -> VtResultPayload.VTResultSEThumbPayload.serializer()
-                else -> VtResultPayload.VTResultSEPeekPayload.serializer()
-            }
-
-            else -> throw IllegalArgumentException("Unsupported Payload type")
-        }
-    }
-}
 
 
 /* Data Objects */

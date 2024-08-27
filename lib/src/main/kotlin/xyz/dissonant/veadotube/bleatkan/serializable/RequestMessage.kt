@@ -1,11 +1,9 @@
+@file:Suppress("MemberVisibilityCanBePrivate", "unused")
+
 package xyz.dissonant.veadotube.bleatkan.serializable
 
 import kotlinx.serialization.*
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonContentPolymorphicSerializer
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonObject
-
 
 
 // Enum for Known Message Events
@@ -31,7 +29,6 @@ enum class MessageEvent(val value: String) {
          *
          *@return Enum Constant
          */
-        @Suppress("unused")
         @JvmStatic
         fun fromValue(value: String): MessageEvent {
             return entries.find { it.value == value } ?: UNKNOWN
@@ -56,7 +53,6 @@ enum class MessagePayloadType(val value: String) {
          *
          *@return Enum Constant
          */
-        @Suppress("unused")
         @JvmStatic
         fun fromValue(value: String): MessagePayloadType {
             return entries.find { it.value == value } ?: UNKNOWN
@@ -81,7 +77,6 @@ enum class MessagePayloadId(val value: String) {
          *
          *@return Enum Constant
          */
-        @Suppress("unused")
         @JvmStatic
         fun fromValue(value: String): MessagePayloadId {
             return entries.find { it.value == value } ?: UNKNOWN
@@ -137,39 +132,12 @@ enum class PayloadEvent(val value: String) {
          *
          *@return Enum Constant
          */
-        @Suppress("unused")
         @JvmStatic
         fun fromValue(value: String): PayloadEvent {
             return requireNotNull(entries.find { it.value == value }) { UNKNOWN }
         }
     }
 }
-
-
-object VtRequestMessageSerializer : JsonContentPolymorphicSerializer<RequestMessage>(RequestMessage::class) {
-    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<RequestMessage> {
-        val jsonObject = element.jsonObject
-        return when {
-            jsonObject["event"]?.equals("list") ?: false -> RequestMessage.RequestMessageNodeList.serializer()
-            jsonObject.containsKey("payload") -> RequestMessage.RequestMessageNodeEvent.serializer()
-            else -> throw IllegalArgumentException("Unsupported request type")
-        }
-    }
-}
-
-
-object VtRequestPayloadSerializer : JsonContentPolymorphicSerializer<RequestPayload>(RequestPayload::class) {
-    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<RequestPayload> {
-        val jsonObject = element.jsonObject
-        return when {
-            jsonObject.containsKey("token") -> RequestPayload.RequestPayloadEventToken.serializer()
-            jsonObject.containsKey("state") -> RequestPayload.RequestPayloadEventState.serializer()
-            jsonObject.containsKey("event") -> RequestPayload.RequestPayloadEvent.serializer()
-            else -> throw IllegalArgumentException("Unsupported Payload type")
-        }
-    }
-}
-
 
 /**
  * Factory for Building and Validating Request Messages.
@@ -181,7 +149,6 @@ object VtRequestPayloadSerializer : JsonContentPolymorphicSerializer<RequestPayl
  */
 class VtRequest {
 
-    @Suppress("unused")
     companion object FACTORY {
         /* Common Requests that can be reused - using lays initialisation to only create when first accessed*/
         /** Request of *event: list* - Lazy Initialized equivalent of *[requestPayloadEventList] as VtRequest* */
