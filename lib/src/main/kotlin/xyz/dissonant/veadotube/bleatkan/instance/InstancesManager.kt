@@ -6,7 +6,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
-import xyz.dissonant.veadotube.bleatkan.MiscFunctions.SHARED.getUnixTime
+import xyz.dissonant.veadotube.bleatkan.MiscFunctions.getUnixTime
 import xyz.dissonant.veadotube.bleatkan.message.VtInstance
 import java.io.FileInputStream
 import java.io.IOException

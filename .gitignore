@@ -70,3 +70,5 @@ logs/
 hs_err_pid*
 replay_pid*
 
+
+/lib/src/main/kotlin/xyz/dissonant/veadotube/bleatkan/testing/
