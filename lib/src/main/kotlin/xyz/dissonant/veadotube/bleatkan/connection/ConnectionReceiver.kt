@@ -1,6 +1,6 @@
 package xyz.dissonant.veadotube.bleatkan.connection
 
-import xyz.dissonant.veadotube.bleatkan.message.VtResultMessage
+import xyz.dissonant.veadotube.bleatkan.message.ResultMessage
 
 interface ConnectionReceiver {
 
@@ -27,6 +27,6 @@ interface ConnectionReceiver {
      * @param channel Channel Message Receive
      * @param data Message Data Received
      */
-    fun onReceive(connection: Connection, channel: String, data: VtResultMessage)
+    fun onReceive(connection: Connection, channel: String, data: ResultMessage)
 }
 

@@ -5,7 +5,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import xyz.dissonant.veadotube.bleatkan.connection.*
 import xyz.dissonant.veadotube.bleatkan.instance.*
 
-import xyz.dissonant.veadotube.bleatkan.message.VtResultMessage
+import xyz.dissonant.veadotube.bleatkan.message.ResultMessage
 
 
 import java.util.concurrent.ConcurrentHashMap
@@ -52,7 +52,7 @@ class TestReceiver : InstancesReceiver, ConnectionReceiver {
         logger.debug { "TestReceiver: onConnect '$connection', active: '$active'" }
     }
 
-    override fun onReceive(connection: Connection, channel: String, data: VtResultMessage) {
+    override fun onReceive(connection: Connection, channel: String, data: ResultMessage) {
         logger.debug { "TestReceiver: onConnect '$connection', data: '$data'" }
     }
 

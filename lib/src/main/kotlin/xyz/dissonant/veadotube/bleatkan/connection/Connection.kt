@@ -586,7 +586,7 @@ class Connection
         /* Basic Decode Block End */
 
         // Decode to Object
-        val messageObj: VtResultMessage = try {
+        val messageObj: ResultMessage = try {
             convertMessage(textCleaned)
         } catch (ex: Exception) {
             LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error Decoding JSON: ${ex.message}" }
@@ -600,10 +600,10 @@ class Connection
     }
 
 
-    private fun convertMessage(textCleaned: String): VtResultMessage {
+    private fun convertMessage(textCleaned: String): ResultMessage {
         //Decode and Convert JSON to Object
         LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: Attempting to decode JSON String to object:\n$textCleaned" }
-        val jsonVtMessage: VtResultMessage =
+        val jsonVtMessage: ResultMessage =
             try {
                 Json.decodeFromString(textCleaned)
             } catch (ex: Exception) {
@@ -625,13 +625,13 @@ class Connection
         if (LOGGER.isTraceEnabled()) {
             // Trace is Enabled, process block to output info (Skip if not)
             LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Event: " + jsonVtMessage.event }
-            if (jsonVtMessage is VtResultMessage.VtResultMessageEntries) {
+            if (jsonVtMessage is ResultMessage.ResultMessageEntries) {
                 LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessageEntries" }
                 LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries: ${jsonVtMessage.entries}" }
                 for (entry in jsonVtMessage.entries) {
                     LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries -> Entry: $entry" }
                 }
-            } else if (jsonVtMessage is VtResultMessage.VtResultMessagePayload) {
+            } else if (jsonVtMessage is ResultMessage.ResultMessagePayload) {
                 LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessagePayload" }
                 LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> ID: ${jsonVtMessage.id}" }
                 LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Type: ${jsonVtMessage.type}" }
@@ -659,7 +659,7 @@ class Connection
         return jsonVtMessage
     }
 
-    private fun passReceivedToClients(channel: String, data: VtResultMessage) {
+    private fun passReceivedToClients(channel: String, data: ResultMessage) {
 
         connectionReceiver.onReceive(this, channel, data)
 

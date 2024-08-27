@@ -38,12 +38,12 @@ object VtRequestPayloadSerializer : JsonContentPolymorphicSerializer<RequestPayl
 
 /* Result Messages */
 
-object VtResultMessageSerializer : JsonContentPolymorphicSerializer<VtResultMessage>(VtResultMessage::class) {
-    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<VtResultMessage> {
+object VtResultMessageSerializer : JsonContentPolymorphicSerializer<ResultMessage>(ResultMessage::class) {
+    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<ResultMessage> {
         val jsonObject = element.jsonObject
         return when {
-            jsonObject.containsKey("payload") -> VtResultMessage.VtResultMessagePayload.serializer()
-            jsonObject.containsKey("entries") -> VtResultMessage.VtResultMessageEntries.serializer()
+            jsonObject.containsKey("payload") -> ResultMessage.ResultMessagePayload.serializer()
+            jsonObject.containsKey("entries") -> ResultMessage.ResultMessageEntries.serializer()
             else -> throw IllegalArgumentException("Unsupported Payload type")
         }
     }

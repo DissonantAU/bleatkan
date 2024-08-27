@@ -8,12 +8,12 @@ import kotlinx.serialization.*
 
 /* Data Objects */
 @Serializable(VtResultMessageSerializer::class)
-sealed class VtResultMessage {
+sealed class ResultMessage {
     /** Event - e.g. list, payload */
     abstract val event: String
 
     @Serializable
-    data class VtResultMessagePayload(
+    data class ResultMessagePayload(
         override val event: String,
         /** Type - e.g. stateEvents */
         val type: String,
@@ -23,14 +23,14 @@ sealed class VtResultMessage {
         val name: String,
 
         val payload: VtResultPayload
-    ) : VtResultMessage()
+    ) : ResultMessage()
 
 
     @Serializable
-    data class VtResultMessageEntries(
+    data class ResultMessageEntries(
         override val event: String,
         val entries: List<Entry>
-    ) : VtResultMessage()
+    ) : ResultMessage()
 
 }
 

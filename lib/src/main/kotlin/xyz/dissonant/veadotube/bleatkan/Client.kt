@@ -1,9 +1,11 @@
+@file:Suppress("unused")
+
 package xyz.dissonant.veadotube.bleatkan
 
 import xyz.dissonant.veadotube.bleatkan.connection.Connection
 
 import xyz.dissonant.veadotube.bleatkan.message.RequestMessage
-import xyz.dissonant.veadotube.bleatkan.message.VtResultMessage
+import xyz.dissonant.veadotube.bleatkan.message.ResultMessage
 
 import java.util.*
 
@@ -72,7 +74,7 @@ abstract class Client(clientConnection: Connection, clientChannels: List<String>
     }
 
     // Method to emit a Received Message to the abstract onReceive
-    fun emitReceive(channel: String, data: VtResultMessage) {
+    fun emitReceive(channel: String, data: ResultMessage) {
         onReceive(channel, data)
     }
 
@@ -86,7 +88,7 @@ abstract class Client(clientConnection: Connection, clientChannels: List<String>
     protected abstract fun onConnect(active: Boolean)
 
     // Protected method to handle received data
-    protected abstract fun onReceive(channel: String?, data: VtResultMessage)
+    protected abstract fun onReceive(channel: String?, data: ResultMessage)
 
 
 
