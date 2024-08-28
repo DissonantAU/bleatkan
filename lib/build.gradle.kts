@@ -10,7 +10,7 @@ plugins {
 
 
 group = "xyz.dissonant.veadotube"
-version = "0.1-DEV" //"1.0-SNAPSHOT"
+version = "0.2.0-DEV" //"1.0-1-SNAPSHOT"
 
 
 repositories {
