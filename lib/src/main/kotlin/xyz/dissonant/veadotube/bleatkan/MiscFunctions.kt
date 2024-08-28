@@ -1,9 +1,9 @@
+@file:Suppress("unused")
+
 package xyz.dissonant.veadotube.bleatkan
 
-@Suppress("Never")
-class MiscFunctions {
 
-    companion object SHARED {
+object MiscFunctions {
 
         /**
          * Returns current time as a Unix (Epoch) Timestamp,
@@ -31,9 +31,6 @@ class MiscFunctions {
         fun convertFromUniversalTimeTicks(ticks:Long):Long{
             return (ticks - 621355968000000000L) / 10000000
         }
-
-
-}
 
 }
 

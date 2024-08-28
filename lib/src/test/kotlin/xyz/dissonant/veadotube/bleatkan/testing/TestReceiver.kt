@@ -1,22 +1,23 @@
+@file:Suppress("unused")
+
 package xyz.dissonant.veadotube.bleatkan.testing
 
 import io.github.oshai.kotlinlogging.KotlinLogging
+import java.util.concurrent.ConcurrentHashMap
 
 import xyz.dissonant.veadotube.bleatkan.connection.*
 import xyz.dissonant.veadotube.bleatkan.instance.*
+import xyz.dissonant.veadotube.bleatkan.message.ResultMessage
 
-import xyz.dissonant.veadotube.bleatkan.serializable.VtResultMessage
 
 
-import java.util.concurrent.ConcurrentHashMap
-
-class TestReceiver : IInstancesReceiver, IConnectionReceiver {
+class TestReceiver : InstancesReceiver, ConnectionReceiver {
 
     private val logger = KotlinLogging.logger {}
 
     private val instanceMap = ConcurrentHashMap<InstanceID, Instance>()
 
-    private val connectionMap = ConcurrentHashMap<String, Connection>()
+    //private val connectionMap = ConcurrentHashMap<String, Connection>()
 
         fun getInstances(): Map<InstanceID, Instance> {
         return instanceMap.toMap()
@@ -52,7 +53,7 @@ class TestReceiver : IInstancesReceiver, IConnectionReceiver {
         logger.debug { "TestReceiver: onConnect '$connection', active: '$active'" }
     }
 
-    override fun onReceive(connection: Connection, channel: String, data: VtResultMessage) {
+    override fun onReceive(connection: Connection, channel: String, data: ResultMessage) {
         logger.debug { "TestReceiver: onConnect '$connection', data: '$data'" }
     }
 

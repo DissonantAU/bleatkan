@@ -1,9 +1,11 @@
+@file:Suppress("unused")
+
 package xyz.dissonant.veadotube.bleatkan
 
 import xyz.dissonant.veadotube.bleatkan.connection.Connection
 
-import xyz.dissonant.veadotube.bleatkan.serializable.VtRequest
-import xyz.dissonant.veadotube.bleatkan.serializable.VtResultMessage
+import xyz.dissonant.veadotube.bleatkan.message.RequestMessage
+import xyz.dissonant.veadotube.bleatkan.message.ResultMessage
 
 import java.util.*
 
@@ -60,19 +62,19 @@ abstract class Client(clientConnection: Connection, clientChannels: List<String>
     }
 
     // Method to send data to the server on the first channel in the list
-    protected fun send(data: VtRequest) {
+    protected fun send(data: RequestMessage) {
         if (channels.isEmpty()) return
 
         connection?.send(channels[0], data)
     }
 
     // Method to send data to the server on a specific channel
-    protected fun send(channel: String, data: VtRequest) {
+    protected fun send(channel: String, data: RequestMessage) {
         connection?.send(channel, data)
     }
 
     // Method to emit a Received Message to the abstract onReceive
-    fun emitReceive(channel: String, data: VtResultMessage) {
+    fun emitReceive(channel: String, data: ResultMessage) {
         onReceive(channel, data)
     }
 
@@ -86,7 +88,7 @@ abstract class Client(clientConnection: Connection, clientChannels: List<String>
     protected abstract fun onConnect(active: Boolean)
 
     // Protected method to handle received data
-    protected abstract fun onReceive(channel: String?, data: VtResultMessage)
+    protected abstract fun onReceive(channel: String?, data: ResultMessage)
 
 
 

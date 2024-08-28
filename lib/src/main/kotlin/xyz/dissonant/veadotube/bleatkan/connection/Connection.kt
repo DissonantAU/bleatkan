@@ -14,9 +14,9 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.*
 
-import xyz.dissonant.veadotube.bleatkan.Client
+import xyz.dissonant.veadotube.bleatkan.Client as VtClient
 import xyz.dissonant.veadotube.bleatkan.instance.Instance
-import xyz.dissonant.veadotube.bleatkan.serializable.*
+import xyz.dissonant.veadotube.bleatkan.message.*
 
 import java.net.URI
 import java.util.*
@@ -37,19 +37,19 @@ import kotlin.collections.HashMap
  * @see java.net.URI
  * @see xyz.dissonant.veadotube.bleatkan.instance.InstanceID
  */
-class Connection(
+
+class Connection
+@JvmOverloads constructor(
     instance: Instance,
-    receiver: IConnectionReceiver,
+    receiver: ConnectionReceiver,
     name: String? = null,
     connectionJobParent: Job = Job(connectionDefaultJobParent)
 ) : AutoCloseable {
 
     companion object {
 
-        private const val NULL_CHAR: Char = '\u0000'
         private const val NULL_BYTE: Byte = 0
-
-        private const val COLON_CHAR = ':'
+        
         private const val COLON_BYTE = ':'.code.toByte()
 
         /**
@@ -76,31 +76,39 @@ class Connection(
          */
         @JvmStatic
         fun closeAll() {
-            val logger = KotlinLogging.logger {}
-            logger.trace { "Connection.closeAll: Setting Supervisor to Complete" }
+
+            LOGGER.trace { "Connection.closeAll: Setting Supervisor to Complete" }
             connectionDefaultJobParent.complete()
 
-            logger.trace { "Connection.closeAll: Cancelling Children" }
+            LOGGER.trace { "Connection.closeAll: Cancelling Children" }
             connectionDefaultJobParent.children.forEach { if (!it.isCancelled && it.isActive) it.cancel("Connection.CloseAll() Called") }
-            logger.trace { "Connection.closeAll: Cancelling Parent" }
+            LOGGER.trace { "Connection.closeAll: Cancelling Parent" }
             connectionDefaultJobParent.cancel("Connection.CloseAll() Called")
-            logger.trace { "Connection.closeAll: Done" }
+            LOGGER.trace { "Connection.closeAll: Done" }
         }
+
+        @JvmStatic
+        private val LOGGER = KotlinLogging.logger {}
 
     }
 
 
-    private val logger = KotlinLogging.logger {}
-
-    private val connectionReceiver: IConnectionReceiver = receiver
+    private val connectionReceiver: ConnectionReceiver = receiver
 
     /**
      * Instance this Connection is connected to
      */
     val instance: Instance
 
-    val server: String = instance.server!!
-    val name: String = name ?: instance.name!!
+    /**
+     * Server this Connection is connected to
+     */
+    val server: String = instance.server
+
+    /**
+     * Name of Instance this Connection is connected to
+     */
+    val name: String = name ?: instance.name
 
     /**
      * Connection URI
@@ -150,12 +158,12 @@ class Connection(
     /**
      * Mutex for HttpClient Creation/Removal
      */
-    private var clientMutex: Mutex = Mutex()
+    private var httpClientMutex: Mutex = Mutex()
 
     /**
      * HttpClient that creates Websocket Sessions, etc.
      */
-    private var client: HttpClient? = null
+    private var httpClient: HttpClient? = null
 
     /**
      * WebSocket Session
@@ -170,7 +178,7 @@ class Connection(
      Not really implemented here, exists in BleatCan but not used by anything right now
      */
 
-    private val clientsMap: HashMap<String, HashSet<Client>> = HashMap()
+    private val clientsMap: HashMap<String, HashSet<VtClient>> = HashMap()
     private var clientsActive = false
 
     /* End Client Vars */
@@ -183,7 +191,7 @@ class Connection(
 
 
     init {
-        logger.trace { "Constructing Connection" }
+        LOGGER.trace { "Constructing Connection" }
         require(this.server.isNotBlank())
         require(this.name.isNotBlank())
 
@@ -196,117 +204,120 @@ class Connection(
             this.instance.getWebSocketUri(this.name)
             connUri = Instance.getWebSocketUri(this.server, this.name)
         } catch (ex: IllegalArgumentException) {
-            receiver.onError(this, ConnectionError.InvalidServerOrName);
+            receiver.onError(this, ConnectionError.InvalidServerOrName)
             throw ex
         }
 
 
 
-        logger.trace { "Connection Websocket Target: $connUri" }
+        LOGGER.trace { "Connection Websocket Target: $connUri" }
 
         id = connUri.toString()
 
         connectionTimeMillis = System.currentTimeMillis()
 
-        logger.trace { "Connection Constructor: RunBlock Start" }
+        LOGGER.trace { "Connection Constructor: RunBlock Start" }
 
 
 
         runBlocking {
-            logger.trace { "Connection Constructor: HTTPClient Creation" }
+            LOGGER.trace { "Connection Constructor: HTTPClient Creation" }
             setupHttpClient()
-            logger.trace { "Connection Constructor: HTTPClient Creation Done" }
+            LOGGER.trace { "Connection Constructor: HTTPClient Creation Done" }
 
             activeLoop = true
 
-            logger.trace { "Connection Constructor: Launch runWebsocketReceive() in $websocketScope" }
+            LOGGER.trace { "Connection Constructor: Launch runWebsocketReceive() in $websocketScope" }
 
             //Run in different scope/context, allowing RunBlock to exit
             websocketScope.async {
-                logger.trace { "Connection Constructor async: Launching runWebsocketReceive()" }
+                LOGGER.trace { "Connection Constructor async: Launching runWebsocketReceive()" }
                 runWebsocketWatcher()
             }.invokeOnCompletion {
                 if (it == null) {
                     //Closed without Error
-                    logger.trace { "runWebsocketWatcher OnCompletion: Closed Normally" }
+                    LOGGER.trace { "runWebsocketWatcher OnCompletion: Closed Normally" }
                 } else {
                     if (it.cause is CancellationException) {
                         //Closed, Normal with Cancellation
-                        logger.trace { "runWebsocketWatcher OnCompletion: Closed Normally with Cancellation" }
+                        LOGGER.trace { "runWebsocketWatcher OnCompletion: Closed Normally with Cancellation" }
                     } else {
                         //Closed with error
-                        logger.warn { "runWebsocketWatcher OnCompletion: Closed with Error: ${it.message}" }
+                        LOGGER.warn { "runWebsocketWatcher OnCompletion: Closed with Error: ${it.message}" }
                         stopWebsocket(closeReason = CloseReason.Codes.INTERNAL_ERROR, "Error: ${it.message}")
                     }
                 }
                 //Close/Cleanup this Connection
                 close()
             }
-            logger.trace { "Connection Constructor: Launched runWebsocketWatcher" }
+            LOGGER.trace { "Connection Constructor: Launched runWebsocketWatcher" }
         }
 
-        logger.trace { "Connection Constructor: RunBlock Done" }
+        LOGGER.trace { "Connection Constructor: RunBlock Done" }
 
     }
 
 
     private fun setupHttpClient() {
-        logger.trace { "Connection Constructor: HTTPClient Creation" }
+        LOGGER.trace { "Connection Constructor: HTTPClient Creation" }
 
         runBlocking {
             //Lock to prevent Concurrent Creation/Destruction
-            logger.trace { "Connection Constructor: HTTPClient Mutex Locking" }
-            clientMutex.lock(this)
-            logger.trace { "Connection Constructor: HTTPClient Mutex Locked" }
+            LOGGER.trace { "Connection Constructor: HTTPClient Mutex Locking" }
+            httpClientMutex.lock(this)
+            LOGGER.trace { "Connection Constructor: HTTPClient Mutex Locked" }
 
             //Client Setup
-            if (client?.isActive != true) {
-                client?.close()
-                client = null
+            if (httpClient?.isActive != true) {
+                httpClient?.close()
+                httpClient = null
 
 
-                client = HttpClient(CIO) {
+                httpClient = HttpClient(CIO) {
                     install(WebSockets) {
                         pingInterval = 4_000
                     }
                     engine {
-                        endpoint.connectTimeout = 5_000
-                        endpoint.connectAttempts = 5
+                        endpoint.connectTimeout = 6_000
+                        endpoint.connectAttempts = 4
                         endpoint.keepAliveTime = 12_000
                         endpoint.socketTimeout = 12_000
                     }
-                    install(Logging)
+                    install(Logging) {
+                        logger = Logger.DEFAULT
+                        level = if (LOGGER.isDebugEnabled()) LogLevel.INFO else LogLevel.NONE
+                    }
                 }
             }
-            clientMutex.unlock(this)
-            logger.trace { "Connection Constructor: HTTPClient Mutex Unlocked" }
+            httpClientMutex.unlock(this)
+            LOGGER.trace { "Connection Constructor: HTTPClient Mutex Unlocked" }
         }
 
-        logger.trace { "Connection Constructor: HTTPClient Creation Done" }
+        LOGGER.trace { "Connection Constructor: HTTPClient Creation Done" }
     }
 
 
     private fun shutdownHttpClient() {
-        logger.trace { "shutdownHttpClient(): HTTPClient Shutdown" }
-        if (client == null) return
+        LOGGER.trace { "shutdownHttpClient(): HTTPClient Shutdown" }
+        if (httpClient == null) return
 
         runBlocking {
             //Lock to prevent Concurrent Creation/Destruction
-            logger.trace { "shutdownHttpClient(): HTTPClient Mutex Locking" }
-            clientMutex.lock(this)
-            logger.trace { "shutdownHttpClient(): HTTPClient Mutex Locked" }
+            LOGGER.trace { "shutdownHttpClient(): HTTPClient Mutex Locking" }
+            httpClientMutex.lock(this)
+            LOGGER.trace { "shutdownHttpClient(): HTTPClient Mutex Locked" }
 
             //Client Setup
-            if (client?.isActive != true) {
-                client?.close()
+            if (httpClient?.isActive != true) {
+                httpClient?.close()
 
-                client = null
+                httpClient = null
             }
 
-            clientMutex.unlock(this)
-            logger.trace { "shutdownHttpClient(): HTTPClient Mutex Unlocked" }
+            httpClientMutex.unlock(this)
+            LOGGER.trace { "shutdownHttpClient(): HTTPClient Mutex Unlocked" }
         }
-        logger.trace { "shutdownHttpClient(): HTTPClient Shutdown Done" }
+        LOGGER.trace { "shutdownHttpClient(): HTTPClient Shutdown Done" }
     }
 
 
@@ -314,9 +325,9 @@ class Connection(
         closeReason: CloseReason.Codes = CloseReason.Codes.NORMAL,
         closeMessage: String = "bye"
     ) {
-        logger.trace { "stopWebsocket: Start" }
+        LOGGER.trace { "stopWebsocket: Start" }
         if (webSocketSession != null) {
-            logger.trace { "stopWebsocket: Closing WS - Reason: $closeReason ; Message: $closeMessage" }
+            LOGGER.trace { "stopWebsocket: Closing WS - Reason: $closeReason ; Message: $closeMessage" }
 
             runBlocking {
                 webSocketSession?.close(
@@ -325,31 +336,31 @@ class Connection(
             }
 
             webSocketSession = null
-            logger.trace { "stopWebsocket: Done" }
+            LOGGER.trace { "stopWebsocket: Done" }
         }
     }
 
     //New Watcher
     private suspend fun runWebsocketWatcher() {
-        logger.trace { "runWebsocketWatcher: Started" }
+        LOGGER.trace { "runWebsocketWatcher: Started" }
 
-        var errorCount = 0;
+        var errorCount = 0
 
 
         while (activeLoop) {
             /* Start Websocket Loop Block */
-            logger.trace { "runWebsocketWatcher: Start of Loop - webSocketSession?.isActive ${webSocketSession?.isActive} " }
+            LOGGER.trace { "runWebsocketWatcher: Start of Loop - webSocketSession?.isActive ${webSocketSession?.isActive} " }
 
 
 
             try {
-                logger.trace { "runWebsocketWatcher: Launch startWebsocket in $websocketScope" }
+                LOGGER.trace { "runWebsocketWatcher: Launch startWebsocket in $websocketScope" }
 
                 //Launch Websocket & Receiver
                 val receiver = websocketScope.async {
-                    logger.trace { "runWebsocketWatcher: Launching startWebsocket" }
+                    LOGGER.trace { "runWebsocketWatcher: Launching startWebsocket" }
                     startWebsocketNew()
-                    logger.trace { "runWebsocketWatcher: Launched startWebsocket" }
+                    LOGGER.trace { "runWebsocketWatcher: Launched startWebsocket" }
                 }
 
 
@@ -362,7 +373,7 @@ class Connection(
 
             } catch (ex: CancellationException) {
                 // Exception - being closed, should quit
-                logger.error { "startWebsocket: Cancelled" }
+                LOGGER.error { "startWebsocket: Cancelled" }
                 activeLoop = false
 
             } catch (ex: Exception) {
@@ -370,17 +381,16 @@ class Connection(
 
                 val closeReason = wsscr?.await()
 
-                if (closeReason?.knownReason == CloseReason.Codes.NORMAL || closeReason?.knownReason == CloseReason.Codes.GOING_AWAY){
+                if (closeReason?.knownReason == CloseReason.Codes.NORMAL || closeReason?.knownReason == CloseReason.Codes.GOING_AWAY) {
                     // Exception was thrown, but was closed normally from other side
-                    logger.trace { "runWebsocketWatcher: Closing > $closeReason" }
-                    logger.trace { "runWebsocketWatcher: Exception was thrown, but closure was normal ${ex.javaClass} - ${ex.message}" }
-                }else
-                {
+                    LOGGER.trace { "runWebsocketWatcher: Closing > $closeReason" }
+                    LOGGER.trace { "runWebsocketWatcher: Exception was thrown, but closure was normal ${ex.javaClass} - ${ex.message}" }
+                } else {
                     errorCount++
 
-                    logger.error { "runWebsocketWatcher: Closing With Exception Reason: $closeReason" }
+                    LOGGER.error { "runWebsocketWatcher: Closing With Exception Reason: $closeReason" }
 
-                    logger.error { "runWebsocketWatcher: Error ($errorCount in a row) ${ex.javaClass} - ${ex.message}" }
+                    LOGGER.error { "runWebsocketWatcher: Error ($errorCount in a row) ${ex.javaClass} - ${ex.message}" }
 
 
 
@@ -390,7 +400,7 @@ class Connection(
                     webSocketSession = null
 
                     if (ex is IOException) {
-                        logger.error { "runWebsocketWatcher: Error connecting to $connUri - Invalid Server or Name" }
+                        LOGGER.error { "runWebsocketWatcher: Error connecting to $connUri - Invalid Server or Name" }
                         connectionReceiver.onError(this, ConnectionError.FailedToConnect)
                     } else {
                         connectionReceiver.onError(this, ConnectionError.None)
@@ -398,7 +408,7 @@ class Connection(
 
                     if (errorCount >= WS_CONN_ERROR_MAX) {
                         //Max Retries Reached
-                        logger.warn { "runWebsocketWatcher: Max Retries reached" }
+                        LOGGER.warn { "runWebsocketWatcher: Max Retries reached" }
                         activeLoop = false
                         connectionReceiver.onError(this, ConnectionError.ExceededRetries)
                         throw ex
@@ -410,10 +420,10 @@ class Connection(
                 val closeReason = wsscr?.await()
 
                 if (closeReason?.knownReason == CloseReason.Codes.NORMAL || closeReason?.knownReason == CloseReason.Codes.GOING_AWAY) {
-                    logger.trace { "runWebsocketWatcher: Closing > $closeReason" }
+                    LOGGER.trace { "runWebsocketWatcher: Closing > $closeReason" }
                 } else {
                     errorCount++
-                    logger.warn { "runWebsocketWatcher: Closing Abnormally > $closeReason" }
+                    LOGGER.warn { "runWebsocketWatcher: Closing Abnormally > $closeReason" }
                 }
 
                 webSocketSession?.close()
@@ -423,11 +433,11 @@ class Connection(
                 if (isConnected) {
                     // isConnected is true but webSocket is not Connected
                     // Post-Disconnect Tear-down, etc.
-                    logger.trace { "runWebsocketWatcher: WS not Active & isConnected is true > cleanup start " }
+                    LOGGER.trace { "runWebsocketWatcher: WS not Active & isConnected is true > cleanup start " }
                     connectionReceiver.onConnect(this, false)
                     updateClients(isConnected)
                     isConnected = false
-                    logger.trace { "runWebsocketWatcher: WS not Active & isConnected is true > cleanup done " }
+                    LOGGER.trace { "runWebsocketWatcher: WS not Active & isConnected is true > cleanup done " }
                 }
             }
 
@@ -435,110 +445,108 @@ class Connection(
         }
 
 
-        logger.trace { "runWebsocketWatcher: Ended" }
+        LOGGER.trace { "runWebsocketWatcher: Ended" }
     }
 
     // New Setup
     private suspend fun startWebsocketNew() {
-        logger.trace { "startWebsocket: Connecting: $connUri (${connUri.host}, ${connUri.port}, ${connUri.rawPath}?${connUri.rawQuery})" }
-        check(client != null && client!!.isActive) { "HttpClient is not active" }
+        LOGGER.trace { "startWebsocket: Connecting: $connUri (${connUri.host}, ${connUri.port}, ${connUri.rawPath}?${connUri.rawQuery})" }
+        check(httpClient != null && httpClient!!.isActive) { "HttpClient is not active" }
         check(webSocketSession?.isActive != true) { "webSocketSession is already active and in use" }
 
-        client?.webSocket(
+        httpClient?.webSocket(
             host = connUri.host,
             port = connUri.port,
             path = "${connUri.rawPath}?${connUri.rawQuery}"
         ) {
             /*Setup */
-            logger.trace { "websocket session block: Connected" }
+            LOGGER.trace { "websocket session block: Connected" }
             //Export WS Session and CloseReason
             webSocketSession = this
             wsscr = this.closeReason
 
             //Run Receiver
-            logger.trace { "websocket session block: Receiver Started" }
+            LOGGER.trace { "websocket session block: Receiver Started" }
             runWebsocketReceiver(this.incoming)
-            logger.trace { "websocket session block: Receiver Closed" }
+            LOGGER.trace { "websocket session block: Receiver Closed" }
         }
 
-        logger.trace { "startWebsocket: Disconnected: $connUri" }
+        LOGGER.trace { "startWebsocket: Disconnected: $connUri" }
     }
 
     // New Receiver
     private suspend fun runWebsocketReceiver(incoming: ReceiveChannel<Frame>) {
-        logger.trace { "runWebsocketReceiver: Started" }
+        LOGGER.trace { "runWebsocketReceiver: Started" }
 
 
         // WebSocket Session is connected
         if (!isConnected) {
             // Connected, but isConnected is false
             // Post-Connect Setup
-            logger.trace { "runWebsocketReceiver: WS Active & isConnected is false > onConnect start " }
+            LOGGER.trace { "runWebsocketReceiver: WS Active & isConnected is false > onConnect start " }
             connectionReceiver.onConnect(this, true)
             updateClients(isConnected)
             isConnected = true
-            logger.trace { "runWebsocketReceiver: WS Active & isConnected is false > onConnect done " }
+            LOGGER.trace { "runWebsocketReceiver: WS Active & isConnected is false > onConnect done " }
         }
 
 
         /* Start Get and Process Message Block*/
-        logger.trace { "runWebsocketReceiver: webSocketSession?.isActive ${webSocketSession?.isActive} " }
+        LOGGER.trace { "runWebsocketReceiver: webSocketSession?.isActive ${webSocketSession?.isActive} " }
 
-        logger.trace { "runWebsocketReceiver: Started Receiving Frames" }
+        LOGGER.trace { "runWebsocketReceiver: Started Receiving Frames" }
 
         for (frame in incoming) {
-            logger.trace { "runWebsocketReceiver: Received Frame - $frame " }
+            LOGGER.trace { "runWebsocketReceiver: Received Frame - $frame " }
 
             when (frame) {
 
                 is Frame.Text -> {
+                    //Should only receive Text/JSON, but processing is done using a Byte Array
                     val messageBytes = frame.readBytes()
-                    logger.trace { "runWebsocketReceiver: ${frame.frameType} Frame with ${frame.readBytes().size} Bytes" }
+                    LOGGER.trace { "runWebsocketReceiver: ${frame.frameType} Frame with ${frame.readBytes().size} Bytes" }
                     processReceivedMessage(messageBytes)
-                    //Alt:
-                    //val messageText = frame.readText()
-                    //val message = processReceivedMessage(messageText)
                 }
 
                 is Frame.Binary -> {
-                    // Should never happen with Veadotube, this would catch and log
-                    logger.debug { "runWebsocketReceiver: ${frame.frameType} Frame with ${frame.readBytes().size} Bytes" }
+                    // Should never happen with Veadotube - catch and log
+                    LOGGER.debug { "runWebsocketReceiver: ${frame.frameType} Frame with ${frame.readBytes().size} Bytes" }
                 }
 
-                is Frame.Close -> {
+                is Frame.Close, is Frame.Ping, is Frame.Pong -> {
                     // Should never happen without Raw Socket
-                    logger.debug { "runWebsocketReceiver: ${frame.frameType} Frame with ${frame.readBytes().size} Bytes" }
+                    LOGGER.debug { "runWebsocketReceiver: ${frame.frameType} Frame with ${frame.readBytes().size} Bytes" }
                 }
 
                 else -> {
                     // Should never happen without Raw Socket
-                    logger.debug { "runWebsocketReceiver: ${frame.frameType} Frame" }
+                    LOGGER.debug { "runWebsocketReceiver: ${frame.frameType} Frame" }
                 }
 
             }
 
             if (!activeLoop) {
-                logger.trace { "runWebsocketReceiver: activeLoop False break out of Receive loop" }
+                LOGGER.trace { "runWebsocketReceiver: activeLoop False break out of Receive loop" }
                 break
             }
         }
-        logger.trace { "runWebsocketReceiver: Stopped Receiving Frames" }
+        LOGGER.trace { "runWebsocketReceiver: Stopped Receiving Frames" }
 
         /* End Get and Process Message Block*/
 
 
-        logger.trace { "runWebsocketReceiver: Ended" }
+        LOGGER.trace { "runWebsocketReceiver: Ended" }
     }
 
 
-    private suspend fun processReceivedMessage(message: ByteArray) {
-        logger.debug { "processReceivedMessage ${message.hashCode()}: ByteArray to Process:\n$message" }
+    private fun processReceivedMessage(message: ByteArray) {
+        LOGGER.debug { "processReceivedMessage ${message.hashCode()}: ByteArray to Process: ${message.size} Bytes" }
 
         /* Basic Decode Block Start */
         // Gets Index of first colon (':') - text before this should represent the Veadotube Channel
-        val channelCharEnd = message.indexOf(COLON_BYTE);
+        val channelCharEnd = message.indexOf(COLON_BYTE)
         if (channelCharEnd < 0) {
-            logger.debug { "processReceivedMessage${message.hashCode()}: Message Missing 'channel:'" }
+            LOGGER.debug { "processReceivedMessage${message.hashCode()}: Message Missing 'channel:'" }
             return
         } // not found, invalid message
 
@@ -547,127 +555,66 @@ class Connection(
         val channel = try {
             String(message, 0, channelCharEnd)
         } catch (ex: Exception) {
-            logger.debug { "processReceivedMessage ${message.hashCode()}: Error extracting Channel: ${ex.message}" }
+            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error extracting Channel: ${ex.message}" }
             return
         }
         if (channel.isBlank()) {
-            logger.debug { "processReceivedMessage ${message.hashCode()}: Message Missing Channel" }
+            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Message Missing Channel" }
             return
         }
 
-        logger.trace { "processReceivedMessage ${message.hashCode()}: Channel '$channel'" }
+        LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Channel '$channel'" }
 
         val nullCharIndex = message.indexOf(NULL_BYTE)
         val textTrimIndex =
             if (nullCharIndex > 0) {
-                logger.trace { "processReceivedMessage ${message.hashCode()}: Culling Nulls after $nullCharIndex" }
+                LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Culling Nulls after $nullCharIndex" }
                 nullCharIndex
             } else {
-                logger.trace { "processReceivedMessage ${message.hashCode()}: No Nulls to Cull" }
+                LOGGER.trace { "processReceivedMessage ${message.hashCode()}: No Nulls to Cull" }
                 message.size
             }
         //Extract JSON
         val textCleaned = try {
             String(message, channelCharEnd + 1, textTrimIndex - (channelCharEnd + 1))
         } catch (ex: Exception) {
-            logger.debug { "processReceivedMessage ${message.hashCode()}: Error extracting JSON: ${ex.message}" }
+            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error extracting JSON: ${ex.message}" }
             return
         }
 
-        logger.trace { "processReceivedMessage ${message.hashCode()}: Final Processed Message:\nChannel: $channel\nJSON: $textCleaned" }
+        LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Final Processed Message:\nChannel: $channel\nJSON: $textCleaned" }
         /* Basic Decode Block End */
 
         // Decode to Object
-        val messageObj: VtResultMessage = try {
+        val messageObj: ResultMessage = try {
             convertMessage(textCleaned)
         } catch (ex: Exception) {
-            logger.debug { "processReceivedMessage ${message.hashCode()}: Error Decoding JSON: ${ex.message}" }
+            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error Decoding JSON: ${ex.message}" }
             return
         }
-        logger.trace { "processReceivedMessage ${message.hashCode()}: Decoded Message:\nVtResultMessage - ${messageObj.javaClass}\n$messageObj" }
+        LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Decoded Message:\nVtResultMessage - ${messageObj.javaClass}\n$messageObj" }
 
         //Pass Decoded Message to connectionReceiver, clients
         passReceivedToClients(channel, messageObj)
 
     }
 
-    //Receive Func
-    private fun processReceivedMessage(message: String) {
-        logger.debug { "processReceivedMessage ${message.hashCode()}: String to Process:\n$message." }
 
-        /* Basic Decode Block Start */
-        // Gets Index of first colon (':') - text before this should represent the Veadotube Channel
-        val channelCharEnd = message.indexOf(COLON_CHAR);
-        if (channelCharEnd < 0) {
-            logger.debug { "processReceivedMessage ${message.hashCode()}: Message Missing 'channel:'" }
-            return
-        } // not found, invalid message
-
-        // If message starts with 'nodes:' (or any other channel prefix) we need to get it
-        // Only 'nodes' exists as a channel for now in veadotube mini, but this could change
-        val channel = try {
-            message.substring(0, channelCharEnd);
-        } catch (ex: Exception) {
-            logger.debug { "processReceivedMessage ${message.hashCode()}: Error extracting Channel: ${ex.message}" }
-            return
-        }
-        if (channel.isBlank()) {
-            logger.debug { "processReceivedMessage ${message.hashCode()}: Message Missing Channel" }
-            return
-        }
-
-        // We need to remove null chars from end of message to process further
-        // we can just grab everything after the channel to the first null char
-        val nullCharIndex = message.indexOf(NULL_CHAR)
-        val textTrimIndex = if (nullCharIndex >= 0) {
-            logger.trace { "processReceivedMessage ${message.hashCode()}: Culling Nulls after $nullCharIndex" }
-            nullCharIndex
-        } else {
-            logger.trace { "processReceivedMessage ${message.hashCode()}: No Nulls to Cull" }
-            message.length
-        }
-
-        //Extract JSON
-        val textCleaned = try {
-            message.substring(channelCharEnd + 1, textTrimIndex)
-        } catch (ex: Exception) {
-            logger.debug { "processReceivedMessage ${message.hashCode()}: Error extracting JSON: ${ex.message}" }
-            return
-        }
-
-        logger.trace { "processReceivedMessage ${message.hashCode()}: Final Processed Message:\nChannel: $channel\nJSON: $textCleaned" }
-        /* Basic Decode Block End */
-
-        // Decode to Object
-        val messageObj: VtResultMessage = try {
-            convertMessage(textCleaned)
-        } catch (ex: Exception) {
-            logger.debug { "processReceivedMessage ${message.hashCode()}: Error Decoding JSON: ${ex.message}" }
-            return
-        }
-        logger.trace { "processReceivedMessage ${message.hashCode()}: Decoded Message:\nVtResultMessage - ${messageObj.javaClass}\n$messageObj" }
-
-
-
-        return
-    }
-
-
-    private fun convertMessage(textCleaned: String): VtResultMessage {
+    private fun convertMessage(textCleaned: String): ResultMessage {
         //Decode and Convert JSON to Object
-        logger.trace { "convertMessage ${textCleaned.hashCode()}: Attempting to decode JSON String to object:\n$textCleaned" }
-        val jsonVtMessage: VtResultMessage =
+        LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: Attempting to decode JSON String to object:\n$textCleaned" }
+        val jsonVtMessage: ResultMessage =
             try {
                 Json.decodeFromString(textCleaned)
             } catch (ex: Exception) {
-                logger.warn { "convertMessage ${textCleaned.hashCode()}: Unable to decode JSON String to VtResultMessage: ${ex.message}\n$textCleaned" }
+                LOGGER.warn { "convertMessage ${textCleaned.hashCode()}: Unable to decode JSON String to VtResultMessage: ${ex.message}\n$textCleaned" }
 
                 try {
                     //Try to convert to generic JSON Element - this isn't passed, but will let us know if it's valid JSON
                     val jsonMessage = Json.parseToJsonElement(textCleaned)
-                    logger.warn { "convertMessage ${textCleaned.hashCode()}: Decoded Message JSON String to Generic JSON Element:\n$jsonMessage" }
+                    LOGGER.warn { "convertMessage ${textCleaned.hashCode()}: Decoded Message JSON String to Generic JSON Element:\n$jsonMessage" }
                 } catch (exInner: Exception) {
-                    logger.warn { "convertMessage ${textCleaned.hashCode()}: Unable to decode JSON String to Generic JSON Element: ${exInner.message}\n$textCleaned" }
+                    LOGGER.warn { "convertMessage ${textCleaned.hashCode()}: Unable to decode JSON String to Generic JSON Element: ${exInner.message}\n$textCleaned" }
                 }
 
                 throw ex
@@ -675,44 +622,44 @@ class Connection(
 
         // If Decode failed, throw should have exited
 
-        if (logger.isTraceEnabled()) {
+        if (LOGGER.isTraceEnabled()) {
             // Trace is Enabled, process block to output info (Skip if not)
-            logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Event: " + jsonVtMessage.event }
-            if (jsonVtMessage is VtResultMessage.VtResultMessageEntries) {
-                logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessageEntries" }
-                logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries: ${jsonVtMessage.entries}" }
+            LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Event: " + jsonVtMessage.event }
+            if (jsonVtMessage is ResultMessage.ResultMessageEntries) {
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessageEntries" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries: ${jsonVtMessage.entries}" }
                 for (entry in jsonVtMessage.entries) {
-                    logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries -> Entry: $entry" }
+                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries -> Entry: $entry" }
                 }
-            } else if (jsonVtMessage is VtResultMessage.VtResultMessagePayload) {
-                logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessagePayload" }
-                logger.trace { "convertMessage ${textCleaned.hashCode()}: -> ID: ${jsonVtMessage.id}" }
-                logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Type: ${jsonVtMessage.type}" }
-                logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Name: ${jsonVtMessage.name}" }
+            } else if (jsonVtMessage is ResultMessage.ResultMessagePayload) {
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessagePayload" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> ID: ${jsonVtMessage.id}" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Type: ${jsonVtMessage.type}" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Name: ${jsonVtMessage.name}" }
 
                 if (jsonVtMessage.payload is VtResultPayload.VTResultSEListPayload) {
-                    logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${jsonVtMessage.payload.event}" }
+                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${jsonVtMessage.payload.event}" }
 
                     for (state in jsonVtMessage.payload.states) {
-                        logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> States -> State: $state" }
+                        LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> States -> State: $state" }
                     }
                 } else if (jsonVtMessage.payload is VtResultPayload.VTResultSEPeekPayload) {
-                    logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${jsonVtMessage.payload.event}" }
-                    logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> State: ${jsonVtMessage.payload.state}" }
+                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${jsonVtMessage.payload.event}" }
+                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> State: ${jsonVtMessage.payload.state}" }
                 }
 
             } else {
-                logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Unknown Message Class: ${jsonVtMessage::class}" }
-                logger.trace { "convertMessage ${textCleaned.hashCode()}: -> Contents: $jsonVtMessage" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Unknown Message Class: ${jsonVtMessage::class}" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Contents: $jsonVtMessage" }
             }
         }
 
-        logger.trace { "convertMessage ${textCleaned.hashCode()}: Decoded JSON String to ${jsonVtMessage::class}" }
+        LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: Decoded JSON String to ${jsonVtMessage::class}" }
 
         return jsonVtMessage
     }
 
-    private suspend fun passReceivedToClients(channel: String, data: VtResultMessage) {
+    private fun passReceivedToClients(channel: String, data: ResultMessage) {
 
         connectionReceiver.onReceive(this, channel, data)
 
@@ -722,7 +669,7 @@ class Connection(
 
     }
 
-    private suspend fun updateClients(isConnected: Boolean) {
+    private fun updateClients(isConnected: Boolean) {
         synchronized(clientsMap) {
             clientsActive = isConnected
             clientsMap.values.stream().flatMap { it.stream() }
@@ -732,23 +679,23 @@ class Connection(
 
 
     override fun close() {
-        logger.trace { "Connection Closing" }
+        LOGGER.trace { "Connection Closing" }
         runBlocking {
-            logger.trace { "Connection Close: activeLoop false" }
+            LOGGER.trace { "Connection Close: activeLoop false" }
             activeLoop = false
             delay(200)
-            logger.trace { "Connection Close: stopWebsocket()" }
+            LOGGER.trace { "Connection Close: stopWebsocket()" }
             stopWebsocket()
             delay(100)
-            logger.trace { "Connection Close: client Close Check" }
+            LOGGER.trace { "Connection Close: client Close Check" }
             shutdownHttpClient()
             isClosed = true
         }
-        logger.trace { "Connection Closed" }
+        LOGGER.trace { "Connection Closed" }
     }
 
     // Method to add or remove clients from channels
-    fun setClient(client: Client, active: Boolean) {
+    fun setClient(client: VtClient, active: Boolean) {
         synchronized(clientsMap) {
             if (active) {
                 // Passed Client to be activated
@@ -756,7 +703,7 @@ class Connection(
                     // For each channel in client channel list
                     // Get the HashSet against the Channel Name. If one doesn't exist, create a new one.
                     // Add Client to HashSet
-                    clientsMap.getOrDefault(channel, HashSet<Client>())
+                    clientsMap.getOrDefault(channel, HashSet<VtClient>())
                         .add(client)
                 }
                 //If clients are set to active, send Connect
@@ -767,7 +714,7 @@ class Connection(
                 // Passed Client to be deactivated
                 for (channel in client.channels) {
                     //Get Set against channel
-                    val set: HashSet<Client>? = clientsMap[channel]
+                    val set: HashSet<VtClient>? = clientsMap[channel]
                     if (set != null && set.remove(client) && set.isEmpty()) {
                         //if Set exists against channel, remove Client from set, and remove Set from Map if empty
                         clientsMap.remove(channel)
@@ -782,25 +729,49 @@ class Connection(
     }
 
     // Send message - Illegal State Exception if not active, Illegal Argument for Channel, ClosedSendChannelException if Channel is Closed other error if send fails
-    fun send(channel: String = "nodes", requestData: VtRequest, validateRequest: Boolean = false) {
+    fun send(channel: String = "nodes", requestData: RequestMessage, validateRequest: Boolean = false) {
         check(!isClosed) { "Connection is Closed" }
         check(activeLoop) { "Connection Websocket not active" }
         require(channel.isNotBlank()) { "Channel cannot be blank" }
         check(webSocketSession?.isActive ?: false) { "Connection Websocket Session is not active" }
-        if (validateRequest) require(VtRequest.validate(requestData)) { "Request is not valid" }
+        if (validateRequest) require(RequestMessage.validate(requestData)) { "Request is not valid" }
 
         runBlocking {
             try {
                 //Convert to String with Channel Prefix and Send
-                val dataAsString: String = "$channel:${Json.encodeToString(VtRequest.serializer(), requestData)}"
-                logger.trace { "Sending message: '$dataAsString'" }
+                val dataAsString = "$channel:${Json.encodeToString(RequestMessage.serializer(), requestData)}"
+                LOGGER.trace { "Sending message: '$dataAsString'" }
                 webSocketSession?.send(dataAsString)
             } catch (e: Exception) {
                 //Could be ClosedSendChannelException
-                logger.error { "send: Error: $e" }
+                LOGGER.error { "send: Error: $e" }
                 throw e
             }
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Connection
+
+        if (connectionTimeMillis != other.connectionTimeMillis) return false
+        if (id != other.id) return false
+        if (instance.id != other.instance.id) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = connectionTimeMillis.hashCode()
+        result = 31 * result + id.hashCode()
+        result = 31 * result + instance.id.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "Connection(instance=${instance.id}, id='$id', connectionTimeMillis=$connectionTimeMillis)"
     }
 
 }

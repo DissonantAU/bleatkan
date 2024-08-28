@@ -10,7 +10,7 @@ plugins {
 
 
 group = "xyz.dissonant.veadotube"
-version = "0.1-DEV" //"1.0-SNAPSHOT"
+version = "0.2.0-DEV" //"1.0-1-SNAPSHOT"
 
 
 repositories {
@@ -23,7 +23,6 @@ dependencies {
     val versionKtor:String by project
     val versionCoroutines:String by project
     val versionLog4j:String by project
-    val versionTouchportal:String by project
     val versionJUnit:String by project
     val versionJUnitPlatformLauncher:String by project
     val versionKotlinxSerializationJson:String by project
@@ -38,6 +37,7 @@ dependencies {
     //Websocket (and HTTP) Framework
     implementation("io.ktor:ktor-client-core:$versionKtor")// KTOR for Websockets
     implementation("io.ktor:ktor-client-websockets:$versionKtor")
+    implementation("io.ktor:ktor-client-logging:$versionKtor")
     // HTTP Engines - pick one
     implementation("io.ktor:ktor-client-cio:$versionKtor") // No HTTP/2 Support, fine for Veadotube Websockets
     //implementation("com.squareup.okhttp3:okhttp:4.12.0+") //Switching would need some changes in Connection.kt
@@ -48,8 +48,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization:$versionKtor")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$versionKtor")
 
-    // Logging
-    implementation("io.ktor:ktor-client-logging:$versionKtor")
+
+
 
     // Log4J
     implementation(platform("org.apache.logging.log4j:log4j-bom:$versionLog4j"))
@@ -73,34 +73,22 @@ dependencies {
 
 }
 
-
-tasks.named<Test>("test") {
+tasks.test {
     useJUnitPlatform()
 }
 
 
-if (JavaVersion.current().isJava8Compatible) {
-    tasks.withType<GroovyCompile>().configureEach { options.compilerArgs.addAll(arrayOf("Xdoclint:none", "-quiet")) }
-}
-
-if (JavaVersion.current().isJava9Compatible) {
-    tasks.withType<GroovyCompile>().configureEach { options.compilerArgs.addAll(arrayOf("--release", "8")) }
-}
-
 kotlin {
     jvmToolchain(8)
+
+    compilerOptions { javaParameters = true }
 }
 
-//tasks.withType<KotlinCompile> {
-//    compilerOptions {
-//        jvmTarget = JvmTarget.JVM_1_8
-//    }
-//}
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
 
-//java {
-//    sourceCompatibility = JavaVersion.VERSION_1_8
-//    targetCompatibility = JavaVersion.VERSION_1_8
-//}
 
 tasks.withType<Jar> {
     archiveBaseName.set(rootProject.name)

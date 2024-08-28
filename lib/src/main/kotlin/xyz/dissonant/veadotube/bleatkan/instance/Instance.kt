@@ -1,7 +1,7 @@
 package xyz.dissonant.veadotube.bleatkan.instance
 
 import xyz.dissonant.veadotube.bleatkan.connection.Connection
-import xyz.dissonant.veadotube.bleatkan.connection.IConnectionReceiver
+import xyz.dissonant.veadotube.bleatkan.connection.ConnectionReceiver
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -117,7 +117,7 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      * @param receiver Object to be sent events by Connection Object
      * @return Connection
      */
-    fun connect(name: String, receiver: IConnectionReceiver): Connection {
+    fun connect(name: String, receiver: ConnectionReceiver): Connection {
 
         val nameTrim = name.trim()
         require(nameTrim.isNotBlank()) { "Name must not be blank" }
@@ -133,7 +133,7 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      * @param receiver Object to be sent events by Connection Object
      * @return Connection
      */
-    fun connect(receiver: IConnectionReceiver): Connection {
+    fun connect(receiver: ConnectionReceiver): Connection {
         return Connection(this, receiver)
     }
 

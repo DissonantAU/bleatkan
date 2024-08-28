@@ -27,7 +27,7 @@ class InstanceID(instanceIdString: String) : Comparable<InstanceID> {
     val type: String
 
     /**
-     * Timestamp - Time Instance was Launched, converted from Hex, in C# DateTime Unversal Time Ticks Format
+     * Timestamp - Time Instance was Launched, converted from Hex, in C# DateTime Universal Time Ticks Format
      */
     val timestamp: Long
 
