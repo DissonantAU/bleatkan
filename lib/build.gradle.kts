@@ -33,6 +33,7 @@ dependencies {
     /* Main Dependencies */
     //Coroutines - concurrent library
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$versionCoroutines")
+    runtimeOnly("org.jetbrains.kotlinx:kotlinx-coroutines-slf4j:$versionCoroutines")
 
     //Websocket (and HTTP) Framework
     implementation("io.ktor:ktor-client-core:$versionKtor")// KTOR for Websockets
