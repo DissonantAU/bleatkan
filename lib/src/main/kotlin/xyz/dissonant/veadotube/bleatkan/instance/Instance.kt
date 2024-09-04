@@ -69,7 +69,7 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
 
 
     init {
-        require(instanceID.isValid) { "InstanceID is not Valid" }
+        require(instanceID.type.isNotEmpty()) { "InstanceID is not Valid" }
         require(instanceName.isNotBlank()) { "instanceName is blank" }
         require(serverAddress.isNotBlank()) { "serverAddress is blank" }
 

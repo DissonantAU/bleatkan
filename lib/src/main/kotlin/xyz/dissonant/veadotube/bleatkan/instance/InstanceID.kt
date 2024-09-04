@@ -1,7 +1,5 @@
 package xyz.dissonant.veadotube.bleatkan.instance
 
-import java.util.*
-
 /**
  * Object to hold parse basic Instance information from an instance filename:
  *
@@ -36,12 +34,10 @@ class InstanceID(instanceIdString: String) : Comparable<InstanceID> {
      */
     val process: Int
 
-    //Store Generated Values for reuse
-    private var instanceID: String? = null //Never Returned as Null
-    private var hashCode = 0 //Never returned as 0
 
+    /** Store Filename/Original for use in toString*/
+    private val instanceID: String
 
-    val isValid: Boolean
 
 
     init {
@@ -58,15 +54,15 @@ class InstanceID(instanceIdString: String) : Comparable<InstanceID> {
 
         require(instanceIdString.isNotBlank()) { "Instance ID String must not be empty or blank" }
 
-        val instanceIdIn = instanceIdString.trim()
+        instanceID = instanceIdString.trim()
         val typeTemp: String?
 
-        var timestampTemp: Long = 0L
-        var processTemp: Int = 0
+        var timestampTemp = -1L
+        var processTemp = -1
 
 
         //Split String
-        val parts = instanceIdIn.split("-")
+        val parts = instanceID.split("-")
         //Test result
         stringFormatCheck(parts)
 
@@ -86,18 +82,16 @@ class InstanceID(instanceIdString: String) : Comparable<InstanceID> {
         }
 
 
-        typeTemp = parts[0].trim()
-        require(typeTemp.all { it.isLetter() }) { "Instance ID String Invalid: 1st part contains non-letter characters" }
+        typeTemp = parts[0]
+        require(typeTemp.isNotEmpty() && typeTemp.all { it.isLetter() }) { "Instance ID String Invalid: 1st part contains non-letter characters" }
 
 
-        //Assign Values - this also runs when return is called
+        //Assign Values
         type = typeTemp
         timestamp = timestampTemp
         process = processTemp
 
 
-        // Set valid boolean here, only if no failure (may as well since we've done the checks already)
-        isValid = true
     }
 
 
@@ -105,44 +99,20 @@ class InstanceID(instanceIdString: String) : Comparable<InstanceID> {
      * @return `String` in the format *Type-LaunchTime:Hex-ProcessId:Hex*
      */
     override fun toString(): String {
-        if (!isValid) {
-            return "" //Return blank string if not valid
-        }
-
-        // Set InstanceID String if blank - we'll return it instead of formatting a new string every time
-        if (instanceID == null) {
-            instanceID = String.format(FORMAT_STRING, type, timestamp, process)
-        }
-
-        return instanceID!!
+        return instanceID
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true //Same Object
-
-        if (!isValid) return false //local not valid
 
         if (other !is InstanceID) return false // Not type InstanceID
 
 
         val that: InstanceID = other //Cast to type
 
-        if (!other.isValid) return false //that not valid
-
         return timestamp == that.timestamp && process == that.process && type == that.type
     }
 
-    override fun hashCode(): Int {
-        //Return 0 if not valid
-        if (!isValid) return 0
-
-        // If cached Hash is empty, generate and store
-        if (hashCode == 0) {
-            hashCode = Objects.hash(type, timestamp, process)
-        }
-
-        return hashCode
-    }
 
     /**
      * Comparison method for sorting, etc.
@@ -156,11 +126,27 @@ class InstanceID(instanceIdString: String) : Comparable<InstanceID> {
         return if (c != 0) c else this.toString().compareTo(other.toString())
     }
 
+
+    override fun hashCode(): Int {
+        var result = type.hashCode()
+        result = 31 * result + timestamp.hashCode()
+        result = 31 * result + process
+        return result
+    }
+
+    @Suppress("unused")
     companion object {
         /**
          * String Format - Converts back to same format as instance file name
          */
-        private const val FORMAT_STRING = "%s-%016x-%08x"
+        const val FORMAT_STRING = "%s-%016x-%08x"
+
+        /**
+         * Generates an InstanceID String from an [InstanceID] using [FORMAT_STRING]
+         */
+        @JvmStatic
+        fun generateStringFromID(instanceID: InstanceID) = FORMAT_STRING.format(instanceID.type, instanceID.timestamp, instanceID.process)
+
 
         /**
          * Takes the File Name, Splits into 3 Parts Tests
@@ -172,6 +158,7 @@ class InstanceID(instanceIdString: String) : Comparable<InstanceID> {
          *
          *  @throws IllegalArgumentException
          */
+        @JvmStatic
         fun stringFormatCheck(instanceIdString: String) {
             val parts = instanceIdString.trim().split("-")
             stringFormatCheck(parts)
@@ -187,6 +174,7 @@ class InstanceID(instanceIdString: String) : Comparable<InstanceID> {
          *
          *  @throws IllegalArgumentException
          */
+        @JvmStatic
         private fun stringFormatCheck(instanceIdParts: List<String>) {
             //Check # of parts
             require(instanceIdParts.size == 3) { "Instance ID String Invalid: Must be 3 parts, separated by dashes (-)" }
@@ -198,10 +186,12 @@ class InstanceID(instanceIdString: String) : Comparable<InstanceID> {
 
         }
 
+        @JvmStatic
         fun equals(a: InstanceID, b: InstanceID): Boolean {
             return a == b
         }
 
+        @JvmStatic
         fun notEquals(a: InstanceID, b: InstanceID): Boolean {
             return a != b
         }
