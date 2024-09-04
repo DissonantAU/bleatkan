@@ -196,12 +196,13 @@ class InstancesManager
                                     LOGGER.trace { "processInstanceFile: server change ${existingInstance.server} -> ${vtInstance.server} " }
 
                                 }
-                                val newInstanceObj = Instance(instanceID, vtInstance.name, vtInstance.server,vtInstance.time)
+                                val newInstanceObj =
+                                    Instance(instanceID, vtInstance.name, vtInstance.server, vtInstance.time)
                                 instancesMap[instanceID] = newInstanceObj
 
                                 LOGGER.debug { "processInstanceFile: Existing instance updated - $existingInstance" }
 
-                                instanceEventReceiver.onChange(newInstanceObj,existingInstance)
+                                instanceEventReceiver.onChange(newInstanceObj, existingInstance)
                             }
                         } else {
                             LOGGER.trace { "processInstanceFile: $eventFilename new instance - $existingInstance" }
@@ -220,7 +221,7 @@ class InstancesManager
                 // Not valid instance of VtInstance - could be a newer/non-mini version of Veadotube
                 LOGGER.warn { "processInstanceFile: $ex" }
                 LOGGER.debug { "processInstanceFile: $eventFilename content - $contents" }
-            }catch (ex:IllegalStateException ){
+            } catch (ex: IllegalStateException) {
                 // Missing vtInstance value, etc.
                 LOGGER.debug { "processInstanceFile: $ex" }
                 LOGGER.debug { "processInstanceFile: $eventFilename content - $contents" }
@@ -377,20 +378,17 @@ class InstancesManager
         watcherActive = false
         instMgrJob.complete()
 
-        runBlocking {
-            LOGGER.trace { "Launching DirectoryWatcher Job" }
-            runCatching { instDirWatchService.close() }
-            watcherJob?.cancel("Instances Manager is Closing")
+        LOGGER.trace { "Closing DirectoryWatcher Job" }
+        runCatching { instDirWatchService.close() }
+        watcherJob?.cancel("Instances Manager is Closing")
 
-            LOGGER.trace { "Launching InstanceChecker Job" }
-            checkerJob?.cancel("Instances Manager is Closing")
+        LOGGER.trace { "Closing InstanceChecker Job" }
+        checkerJob?.cancel("Instances Manager is Closing")
 
-            delay(50)
-
-            if (!instMgrJob.isCompleted) {
-                instMgrJob.cancel("Instances Manager is Closing")
-            }
+        if (!instMgrJob.isCompleted) {
+            instMgrJob.cancel("Instances Manager is Closing")
         }
+
 
         LOGGER.trace { "Instance Manager Closed" }
     }
@@ -399,14 +397,14 @@ class InstancesManager
      * Returns [Instance] Object from Map that matches [InstanceID] Object
      */
     fun getInstance(id: InstanceID): Instance? {
-        var inst : Instance?
+        var inst: Instance?
         runBlocking {
             instancesMapMutex.withLock {
                 inst = instancesMap[id]
             }
         }
 
-       return inst
+        return inst
     }
 
 }
