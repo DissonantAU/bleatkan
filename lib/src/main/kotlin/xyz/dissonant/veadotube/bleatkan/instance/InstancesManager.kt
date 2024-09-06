@@ -240,161 +240,170 @@ class InstancesManager
     //Instance File Watcher Service
     private var instDirWatchService: WatchService = FileSystems.getDefault().newWatchService()
 
-    private suspend fun runDirectoryWatcherLoop() =withContext(instanceReaderDispatcher) {
-            LOGGER.trace { "DirectoryWatcher: Loop Start" }
+    private suspend fun runDirectoryWatcherLoop() = withContext(instanceReaderDispatcher) {
+        LOGGER.trace { "DirectoryWatcher: Loop Start" }
 
-            // Initial Directory check
-            Files.walk(dirInstances, 1).consumeAsFlow()
-                .filterNotNull().filterNot { it.isDirectory() }
-                .onEach { dirInstances.resolve(it) }
-                .onEach {
-                    //Process File
-                    processInstanceFileCreateModify(it) }
-                .catch { LOGGER.debug { "DirectoryWatcher: Error with initial File check: ${it.message}" } }
-                .collect()
-
-
-            //Start Watching Directory
-            val instDirPathKey: WatchKey =
-                dirInstances.register(instDirWatchService, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
-
-            try {
-                LOGGER.trace { "DirectoryWatcher: Watcher Loop Start" }
-                while (watcherActive && isActive) {
-                    val loopStartTime = Instant.now().epochSecond
-                    val instDirLoopKey: WatchKey = instDirWatchService.take()
-
-                    LOGGER.trace { "DirectoryWatcher: Polling File Events" }
-                    //Poll for changes in instances folder - does not block if not files found
-                    instDirLoopKey.pollEvents().asFlow()
-                        .filterNot { event -> event.kind() === OVERFLOW }
-                        .transform { event ->
-                            // Resolve the filename from context of the event.
-                            val eventPath: Path = dirInstances.resolve(event.context() as Path)
-
-                            if (event.kind() === ENTRY_DELETE) {
-                                // We won't do anything, there's a timeout for instances
-                                LOGGER.trace { "DirectoryWatcher: File Deleted: ${eventPath.name}" }
-                            } else {
-                                // For 'Create' or 'Modify' Event - Launches coroutine to get and process for each file
-                                LOGGER.trace { "DirectoryWatcher: File Created or Modified: ${eventPath.name}" }
-                                //Emit Path for processing
-                                emit(eventPath)
-                            }
-                        }
-                        .onEach { path ->
-                            //Process File
-                            processInstanceFileCreateModify(path)
-                        }
-                        .collect()
-
-                    // Reset key for next loop, if it fails loop ends
-                    check(instDirLoopKey.reset()) { "Folder Watch Key no longer Valid" }
-
-                    //Calculate loop time and delay before next loop
-                    val loopEndTime = Instant.now().epochSecond
-                    val loopTimeSeconds = loopEndTime - loopStartTime
-                    var delayTimeMSec =
-                        READ_LOOP_DELAY_MAX_MS - (loopTimeSeconds * 1000) //Start time minus End Time = Seconds Passed
-                    when {
-                        (delayTimeMSec < READ_LOOP_DELAY_MIN_MS) -> delayTimeMSec = READ_LOOP_DELAY_MIN_MS //min wait
-                        (delayTimeMSec > READ_LOOP_DELAY_MAX_MS) -> delayTimeMSec = READ_LOOP_DELAY_MAX_MS //max wait
-                    }
-                    LOGGER.trace { "DirectoryWatcher: Loop took $loopTimeSeconds Seconds, Delaying ${delayTimeMSec / 1000f} Seconds before next check" }
-                    delay(delayTimeMSec)
-                }
-                LOGGER.trace { "DirectoryWatcher: Watcher Loop Ended" }
-            } catch (ex: ClosedWatchServiceException) {
-                LOGGER.trace { "DirectoryWatcher: WatchService Closed with ${ex.message}" }
-            } finally {
-                LOGGER.trace { "DirectoryWatcher: Finally Cleanup" }
-                watcherActive = false
-
-                //Cleanup
-                instDirPathKey.cancel()
-                instDirWatchService.close()
+        // Initial Directory check
+        Files.walk(dirInstances, 1).consumeAsFlow()
+            .filterNotNull().filterNot { it.isDirectory() }
+            .onEach { dirInstances.resolve(it) }
+            .onEach {
+                //Process File
+                processInstanceFileCreateModify(it)
             }
+            .catch { LOGGER.debug { "DirectoryWatcher: Error with initial File check: ${it.message}" } }
+            .collect()
+
+
+        //Start Watching Directory
+        val instDirPathKey: WatchKey =
+            dirInstances.register(instDirWatchService, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY)
+
+        try {
+            LOGGER.trace { "DirectoryWatcher: Watcher Loop Start" }
+            while (watcherActive && isActive) {
+                val loopStartTime = Instant.now().epochSecond
+                val instDirLoopKey: WatchKey = instDirWatchService.take()
+
+                LOGGER.trace { "DirectoryWatcher: Polling File Events" }
+                //Poll for changes in instances folder - does not block if not files found
+                instDirLoopKey.pollEvents().asFlow()
+                    .filterNot { event -> event.kind() === OVERFLOW }
+                    .transform { event ->
+                        // Resolve the filename from context of the event.
+                        val eventPath: Path = dirInstances.resolve(event.context() as Path)
+
+                        if (event.kind() === ENTRY_DELETE) {
+                            // We won't do anything, there's a timeout for instances
+                            LOGGER.trace { "DirectoryWatcher: File Deleted: ${eventPath.name}" }
+                        } else {
+                            // For 'Create' or 'Modify' Event - Launches coroutine to get and process for each file
+                            LOGGER.trace { "DirectoryWatcher: File Created or Modified: ${eventPath.name}" }
+                            //Emit Path for processing
+                            emit(eventPath)
+                        }
+                    }
+                    .onEach { path ->
+                        //Process File
+                        processInstanceFileCreateModify(path)
+                    }
+                    .collect()
+
+                // Reset key for next loop, if it fails loop ends
+                check(instDirLoopKey.reset()) { "Folder Watch Key no longer Valid" }
+
+                //Calculate loop time and delay before next loop
+                val loopEndTime = Instant.now().epochSecond
+                val loopTimeSeconds = loopEndTime - loopStartTime
+                var delayTimeMSec =
+                    READ_LOOP_DELAY_MAX_MS - (loopTimeSeconds * 1000) //Start time minus End Time = Seconds Passed
+                when {
+                    (delayTimeMSec < READ_LOOP_DELAY_MIN_MS) -> delayTimeMSec = READ_LOOP_DELAY_MIN_MS //min wait
+                    (delayTimeMSec > READ_LOOP_DELAY_MAX_MS) -> delayTimeMSec = READ_LOOP_DELAY_MAX_MS //max wait
+                }
+                LOGGER.trace { "DirectoryWatcher: Loop took $loopTimeSeconds Seconds, Delaying ${delayTimeMSec / 1000f} Seconds before next check" }
+                delay(delayTimeMSec)
+            }
+            LOGGER.trace { "DirectoryWatcher: Watcher Loop Ended" }
+        } catch (ex: ClosedWatchServiceException) {
+            LOGGER.trace { "DirectoryWatcher: WatchService Closed with ${ex.message}" }
+        } finally {
+            LOGGER.trace { "DirectoryWatcher: Finally Cleanup" }
+            watcherActive = false
+
+            //Cleanup
+            instDirPathKey.cancel()
+            instDirWatchService.close()
+        }
 
         LOGGER.trace { "DirectoryWatcher: Loop Closed" }
-        }
+    }
 
 
     private suspend fun runInstanceCheckerLoop() = withContext(instanceCheckerDispatcher) {
-            LOGGER.trace { "InstanceChecker: coroutineScope Start" }
+        LOGGER.trace { "InstanceChecker: coroutineScope Start" }
 
-            val instancesToRemove = HashSet<Instance>()
+        val instancesToRemove = HashSet<Instance>()
 
-            try {
+        try {
 
-                while (watcherActive && isActive) {
-                    //Delay before loop
-                    delay(READ_LOOP_DELAY_MAX_MS)
-                    val loopStartTime = Instant.now().epochSecond
+            while (watcherActive && isActive) {
+                //Delay before loop
+                delay(READ_LOOP_DELAY_MAX_MS)
+                val loopStartTime = Instant.now().epochSecond
 
-                    instancesToRemove.clear()
+                instancesToRemove.clear()
 
-                    LOGGER.trace { "InstanceChecker: Waiting for Sync on instancesMap" }
+                LOGGER.trace { "InstanceChecker: Waiting for Sync on instancesMap" }
 
-                    instancesMapMutex.withLock {
-                        /* Sync Block Start */
-                        LOGGER.trace { "InstanceChecker: Acquired Sync Lock on instancesMap" }
+                instancesMapMutex.withLock {
+                    /* Sync Block Start */
+                    LOGGER.trace { "InstanceChecker: Acquired Sync Lock on instancesMap" }
 
-                        //Get Instances to Remove
-                        for (instance in instancesMap.values) {
-                            if (instance.fileLastModified < getUnixTime() - READ_TIMEOUT_SEC) {
-                                //Instance has aged out without file refresh
-                                instancesToRemove.add(instance)
-                            }
+                    //Get Instances to Remove
+                    for (instance in instancesMap.values) {
+                        if (instance.fileLastModified < getUnixTime() - READ_TIMEOUT_SEC) {
+                            //Instance has aged out without file refresh
+                            instancesToRemove.add(instance)
                         }
-
-                        //Process Instances to Remove
-                        for (instance in instancesToRemove) {
-                            instancesMap.remove(instance.id)
-                            instanceEventReceiver.onEnd(instance.id)
-                        }
-
-                        /* Sync Block End */
                     }
 
-                    val loopEndTime = Instant.now().epochSecond
-                    val loopTimeSeconds = loopEndTime - loopStartTime
-                    LOGGER.trace { "InstanceChecker: Loop took $loopTimeSeconds Seconds, Delaying ${READ_LOOP_DELAY_MAX_MS / 1000f} Seconds before next check" }
-                }
-
-            } finally {
-                watcherActive = false
-                LOGGER.trace { "InstanceChecker: Finally" }
-                //Cleanup
-                instancesMapMutex.withLock {
-                    for (instance in instancesMap.values) {
+                    //Process Instances to Remove
+                    for (instance in instancesToRemove) {
                         instancesMap.remove(instance.id)
                         instanceEventReceiver.onEnd(instance.id)
                     }
+
+                    /* Sync Block End */
                 }
+
+                val loopEndTime = Instant.now().epochSecond
+                val loopTimeSeconds = loopEndTime - loopStartTime
+                LOGGER.trace { "InstanceChecker: Loop took $loopTimeSeconds Seconds, Delaying ${READ_LOOP_DELAY_MAX_MS / 1000f} Seconds before next check" }
             }
 
+        } finally {
+            watcherActive = false
+            LOGGER.trace { "InstanceChecker: Finally" }
+            //Cleanup
+            instancesMapMutex.withLock {
+                for (instance in instancesMap.values) {
+                    instancesMap.remove(instance.id)
+                    instanceEventReceiver.onEnd(instance.id)
+                }
+            }
         }
 
+    }
 
-    override fun close() {
-        if (!instMgrJob.complete()) return
-        LOGGER.trace { "Instance Manager Closing" }
+    /** Function to clean up after instMgrJob */
+    private fun cleanup() {
+        LOGGER.trace { "Instance Manager Cleanup Start" }
         watcherActive = false
 
+        LOGGER.trace { "Closing WatchService" }
+        runCatching { instDirWatchService.close() }
 
         LOGGER.trace { "Closing DirectoryWatcher Job" }
-        runCatching { instDirWatchService.close() }
-        watcherJob?.cancel("Instances Manager is Closing")
+        runCatching { watcherJob?.cancel("Instances Manager is Closing") }
+        watcherJob = null
 
         LOGGER.trace { "Closing InstanceChecker Job" }
-        checkerJob?.cancel("Instances Manager is Closing")
+        runCatching { checkerJob?.cancel("Instances Manager is Closing") }
+        checkerJob = null
 
-        if (!instMgrScope.isActive) {
-            instMgrScope.cancel("Instances Manager is Closing")
-        }
-
-        LOGGER.trace { "Instance Manager Closed" }
+        LOGGER.trace { "Instance Manager Cleanup Done" }
     }
+
+    override fun close() {
+        if (instMgrJob.isCancelled) {
+            return
+        }
+        watcherActive = false
+
+        runCatching { instMgrJob.cancel("Instances Manager is Closing") }
+    }
+
 
     /**
      * Returns [Instance] Object from Map that matches [InstanceID] Object

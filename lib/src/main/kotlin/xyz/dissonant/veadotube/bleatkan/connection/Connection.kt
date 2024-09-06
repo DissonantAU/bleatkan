@@ -76,15 +76,9 @@ class Connection
          */
         @JvmStatic
         fun closeAll() {
-
-            LOGGER.trace { "Connection.closeAll: Setting Supervisor to Complete" }
-            connectionDefaultJobParent.complete()
-
-            LOGGER.trace { "Connection.closeAll: Cancelling Children" }
-            connectionDefaultJobParent.children.forEach { if (!it.isCancelled && it.isActive) it.cancel("Connection.CloseAll() Called") }
-            LOGGER.trace { "Connection.closeAll: Cancelling Parent" }
+            LOGGER.debug { "Connection.closeAll: Cancelling Parent Jobs" }
             connectionDefaultJobParent.cancel("Connection.CloseAll() Called")
-            LOGGER.trace { "Connection.closeAll: Done" }
+            LOGGER.debug { "Connection.closeAll: Done" }
         }
 
         @JvmStatic
