@@ -137,20 +137,17 @@ class InstancesManager
      * Process an Instance file and add to instancesMap
      * @param eventPath Fully Resolved Path of an Instance File
      */
-
-
     private suspend fun processInstanceFileCreateModify(eventPath: Path) = withContext(instanceReaderDispatcher) {
 
         try {
             val eventFilename = eventPath.name
 
-            LOGGER.trace { "processInstanceFile: File Name > $eventFilename > Full Path: $eventPath" }
+            LOGGER.trace { "processInstanceFile: File Name > $eventPath" }
 
             //Get Contents of file - not bothering with a buffered reader since it's a small file, and we're loading the whole thing
             val contents = FileReader(eventPath.toFile()).use { it.readText() }
 
             LOGGER.trace { "processInstanceFile: Done reading $eventFilename" }
-
 
             try {
 
@@ -169,8 +166,6 @@ class InstancesManager
 
                     //Get Instance ID Object from Map, or Create if new
                     val instanceID = instancesIDMap.getOrPut(eventFilename) { InstanceID(eventFilename) }
-
-                    LOGGER.trace { "processInstanceFile: Waiting for Sync on instancesMap for $eventFilename" }
 
                     instancesMapMutex.withLock {
                         /* Sync Block Start */
@@ -199,18 +194,17 @@ class InstancesManager
 
                                 if (existingInstance.server != vtInstance.server) {
                                     LOGGER.trace { "processInstanceFile: server change ${existingInstance.server} -> ${vtInstance.server} " }
-
                                 }
+
                                 val newInstanceObj =
                                     Instance(instanceID, vtInstance.name, vtInstance.server, vtInstance.time)
                                 instancesMap[instanceID] = newInstanceObj
 
-                                LOGGER.debug { "processInstanceFile: Existing instance updated - $existingInstance" }
+                                LOGGER.debug { "processInstanceFile: Existing instance updated - ${existingInstance.toString()}" }
 
                                 instanceEventReceiver.onChange(newInstanceObj, existingInstance)
                             }
                         } else {
-                            LOGGER.trace { "processInstanceFile: $eventFilename new instance - $existingInstance" }
                             LOGGER.debug { "processInstanceFile: New instance added - $existingInstance" }
                             instanceEventReceiver.onStart(existingInstance)
                         }
@@ -220,19 +214,16 @@ class InstancesManager
                 }
             } catch (ex: SerializationException) {
                 /* Sometimes happens when the file happens to be read when it's still being written */
-                LOGGER.debug { "processInstanceFile: $ex" }
-                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents" }
+                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - $ex" }
             } catch (ex: IllegalArgumentException) {
                 // Not valid instance of VtInstance - could be a newer/non-mini version of Veadotube
-                LOGGER.warn { "processInstanceFile: $ex" }
-                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents" }
+                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - $ex" }
             } catch (ex: IllegalStateException) {
                 // Missing vtInstance value, etc.
-                LOGGER.debug { "processInstanceFile: $ex" }
-                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents" }
+                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - $ex" }
             }
         } catch (ex: IOException) {
-            LOGGER.warn { "processInstanceFile: $ex" }
+            LOGGER.debug { "processInstanceFile: $ex" }
         }
     }
 
@@ -246,9 +237,12 @@ class InstancesManager
         // Initial Directory check
         Files.walk(dirInstances, 1).consumeAsFlow()
             .filterNotNull().filterNot { it.isDirectory() }
-            .onEach { dirInstances.resolve(it) }
             .onEach {
-                //Process File
+                // Resolve Path
+                dirInstances.resolve(it)
+            }
+            .onEach {
+                // Process File
                 processInstanceFileCreateModify(it)
             }
             .catch { LOGGER.debug { "DirectoryWatcher: Error with initial File check: ${it.message}" } }
@@ -307,6 +301,8 @@ class InstancesManager
             LOGGER.trace { "DirectoryWatcher: Watcher Loop Ended" }
         } catch (ex: ClosedWatchServiceException) {
             LOGGER.trace { "DirectoryWatcher: WatchService Closed with ${ex.message}" }
+        } catch (ex: Exception) {
+            LOGGER.warn { "DirectoryWatcher: Exception in DirectoryWatcher: ${ex.message}" }
         } finally {
             LOGGER.trace { "DirectoryWatcher: Finally Cleanup" }
             watcherActive = false

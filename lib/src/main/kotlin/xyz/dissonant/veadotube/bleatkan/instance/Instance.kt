@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets
  *
  * @see InstanceID
  */
-@Suppress("MemberVisibilityCanBePrivate")
+@Suppress("MemberVisibilityCanBePrivate", "unused")
 class Instance(instanceID: InstanceID, instanceName: String, serverAddress: String, lastModified:Long=-1) {
     /**
      * Instance ID
@@ -27,6 +27,7 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      * @see InstanceID
      */
     val id: InstanceID
+
 
     /**
      * Client Display Name (For example "veadotube mini")
@@ -57,6 +58,7 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      */
     var fileLastModified: Long
         internal set
+
 
     /**
      * ID Unique to this Instance combining Server, Name, and ID.
@@ -135,6 +137,10 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      */
     fun connect(receiver: ConnectionReceiver): Connection {
         return Connection(this, receiver)
+    }
+
+    override fun toString(): String {
+        return "Instance(instanceConnectionID='$instanceConnectionID', id=$id, name='$name', server='$server', fileLastModified=$fileLastModified)"
     }
 
     companion object {
