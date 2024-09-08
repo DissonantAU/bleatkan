@@ -14,14 +14,16 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.*
 
-import xyz.dissonant.veadotube.bleatkan.Client as VtClient
 import xyz.dissonant.veadotube.bleatkan.instance.Instance
 import xyz.dissonant.veadotube.bleatkan.message.*
 
 import java.net.URI
+
+/* //clientsMap not currently used
+import xyz.dissonant.veadotube.bleatkan.Client as VtClient
 import java.util.*
 import kotlin.collections.HashMap
-
+*/
 
 /**
  * TBC
@@ -172,8 +174,8 @@ class Connection
      Not really implemented here, exists in BleatCan but not used by anything right now
      */
 
-    private val clientsMap: HashMap<String, HashSet<VtClient>> = HashMap()
-    private var clientsActive = false
+    //private val clientsMap: HashMap<String, HashSet<VtClient>> = HashMap()
+    //private var clientsActive = false
 
     /* End Client Vars */
 
@@ -429,7 +431,7 @@ class Connection
                     // Post-Disconnect Tear-down, etc.
                     LOGGER.trace { "runWebsocketWatcher: WS not Active & isConnected is true > cleanup start " }
                     connectionReceiver.onConnect(this, false)
-                    updateClients(isConnected)
+                    //updateClients(isConnected) // clientsMap not currently used
                     isConnected = false
                     LOGGER.trace { "runWebsocketWatcher: WS not Active & isConnected is true > cleanup done " }
                 }
@@ -479,7 +481,7 @@ class Connection
             // Post-Connect Setup
             LOGGER.trace { "runWebsocketReceiver: WS Active & isConnected is false > onConnect start " }
             connectionReceiver.onConnect(this, true)
-            updateClients(isConnected)
+            //updateClients(isConnected) // clientsMap not currently used
             isConnected = true
             LOGGER.trace { "runWebsocketReceiver: WS Active & isConnected is false > onConnect done " }
         }
@@ -657,19 +659,13 @@ class Connection
 
         connectionReceiver.onReceive(this, channel, data)
 
+        /*// clientsMap Not currently Used
         synchronized(clientsMap) {
             clientsMap[channel]?.forEach { client -> client.emitReceive(channel, data) }
-        }
+        }*/
 
     }
 
-    private fun updateClients(isConnected: Boolean) {
-        synchronized(clientsMap) {
-            clientsActive = isConnected
-            clientsMap.values.stream().flatMap { it.stream() }
-                .distinct().forEach { it?.emitConnect(clientsActive) }
-        }
-    }
 
 
     override fun close() {
@@ -688,39 +684,7 @@ class Connection
         LOGGER.trace { "Connection Closed" }
     }
 
-    // Method to add or remove clients from channels
-    fun setClient(client: VtClient, active: Boolean) {
-        synchronized(clientsMap) {
-            if (active) {
-                // Passed Client to be activated
-                for (channel in client.channels) {
-                    // For each channel in client channel list
-                    // Get the HashSet against the Channel Name. If one doesn't exist, create a new one.
-                    // Add Client to HashSet
-                    clientsMap.getOrDefault(channel, HashSet<VtClient>())
-                        .add(client)
-                }
-                //If clients are set to active, send Connect
-                if (clientsActive) {
-                    client.emitConnect(true)
-                }
-            } else {
-                // Passed Client to be deactivated
-                for (channel in client.channels) {
-                    //Get Set against channel
-                    val set: HashSet<VtClient>? = clientsMap[channel]
-                    if (set != null && set.remove(client) && set.isEmpty()) {
-                        //if Set exists against channel, remove Client from set, and remove Set from Map if empty
-                        clientsMap.remove(channel)
-                    }
-                }
-                //If clients are set to inactive, send Disconnect
-                if (clientsActive) {
-                    client.emitConnect(false)
-                }
-            }
-        }
-    }
+
 
     // Send message - Illegal State Exception if not active, Illegal Argument for Channel, ClosedSendChannelException if Channel is Closed other error if send fails
     fun send(channel: String = "nodes", requestData: RequestMessage, validateRequest: Boolean = false) {
@@ -767,6 +731,53 @@ class Connection
     override fun toString(): String {
         return "Connection(instance=${instance.id}, id='$id', connectionTimeMillis=$connectionTimeMillis)"
     }
+
+
+
+    // Method to add or remove clients from channels - clientsMap not current used
+    /*fun setClient(client: VtClient, active: Boolean) {
+        synchronized(clientsMap) {
+            if (active) {
+                // Passed Client to be activated
+                for (channel in client.channels) {
+                    // For each channel in client channel list
+                    // Get the HashSet against the Channel Name. If one doesn't exist, create a new one.
+                    // Add Client to HashSet
+                    clientsMap.getOrDefault(channel, HashSet<VtClient>())
+                        .add(client)
+                }
+                //If clients are set to active, send Connect
+                if (clientsActive) {
+                    client.emitConnect(true)
+                }
+            } else {
+                // Passed Client to be deactivated
+                for (channel in client.channels) {
+                    //Get Set against channel
+                    val set: HashSet<VtClient>? = clientsMap[channel]
+                    if (set != null && set.remove(client) && set.isEmpty()) {
+                        //if Set exists against channel, remove Client from set, and remove Set from Map if empty
+                        clientsMap.remove(channel)
+                    }
+                }
+                //If clients are set to inactive, send Disconnect
+                if (clientsActive) {
+                    client.emitConnect(false)
+                }
+            }
+        }
+    }*/
+
+    // Method to update clients connection status - clientsMap not currently used
+    /*private fun updateClients(isConnected: Boolean) {
+        synchronized(clientsMap) {
+            clientsActive = isConnected
+            clientsMap.values.stream().flatMap { it.stream() }
+                .distinct().forEach { it?.emitConnect(clientsActive) }
+        }
+    }*/
+
+
 
 }
 

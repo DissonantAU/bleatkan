@@ -58,7 +58,7 @@ abstract class Client(clientConnection: Connection, clientChannels: List<String>
 
     protected fun registerWithConnection() {
         // Register this client with the connection as active if not null
-        connection?.setClient(this, true)
+        //connection?.setClient(this, true) // clientsMap not currently used in connection
     }
 
     // Method to send data to the server on the first channel in the list
@@ -94,7 +94,7 @@ abstract class Client(clientConnection: Connection, clientChannels: List<String>
 
     override fun close() {
         // Notify the connection that this client is no longer active, return if not
-        connection?.setClient(this, false)
+        //connection?.setClient(this, false) // clientsMap not currently used in connection
         // Release the reference to the connection
         connection = null
     }
