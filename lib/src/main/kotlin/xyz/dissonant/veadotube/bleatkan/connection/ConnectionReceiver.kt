@@ -24,9 +24,8 @@ interface ConnectionReceiver {
      * Veadotube Connection Update - Message Received
      *
      * @param connection Connection providing update
-     * @param channel Channel Message Receive
-     * @param data Message Data Received
+     * @param message Message Data Received
      */
-    fun onReceive(connection: Connection, channel: String, data: ResultMessage)
+    fun onReceive(connection: Connection, message: ResultMessage)
 }
 

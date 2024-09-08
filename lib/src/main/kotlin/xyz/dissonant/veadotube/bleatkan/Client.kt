@@ -74,8 +74,8 @@ abstract class Client(clientConnection: Connection, clientChannels: List<String>
     }
 
     // Method to emit a Received Message to the abstract onReceive
-    fun emitReceive(channel: String, data: ResultMessage) {
-        onReceive(channel, data)
+    fun emitReceive(message: ResultMessage) {
+        onReceive(message)
     }
 
 
@@ -88,7 +88,7 @@ abstract class Client(clientConnection: Connection, clientChannels: List<String>
     protected abstract fun onConnect(active: Boolean)
 
     // Protected method to handle received data
-    protected abstract fun onReceive(channel: String?, data: ResultMessage)
+    protected abstract fun onReceive(message: ResultMessage)
 
 
 

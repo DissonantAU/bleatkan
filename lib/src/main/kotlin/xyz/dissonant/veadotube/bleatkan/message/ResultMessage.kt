@@ -12,6 +12,8 @@ sealed class ResultMessage {
     /** Event - e.g. list, payload */
     abstract val event: String
 
+
+
     @Serializable
     data class ResultMessagePayload(
         override val event: String,
@@ -31,6 +33,17 @@ sealed class ResultMessage {
         override val event: String,
         val entries: List<Entry>
     ) : ResultMessage()
+
+    /**
+     * Channel message was received from
+     *
+     * Transient value not included in JSON, but is added after decoding for use if needed
+     *
+     * Blank by default
+     */
+    @Transient
+    var channel:String = ""
+        internal set
 
 }
 
