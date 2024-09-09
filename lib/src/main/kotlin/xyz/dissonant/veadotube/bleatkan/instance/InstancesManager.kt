@@ -35,7 +35,9 @@ class InstancesManager
     companion object {
         private val LOGGER = KotlinLogging.logger {}
 
-        /** Timestamp Timeout in Seconds - File with an older than 10s is considered out of date, possibly dead. */
+        /** Timestamp Timeout in Seconds
+         *
+         * An Instance File with an internal timestamp older than 10s is considered out of date/dead */
         const val READ_TIMEOUT_SEC: Long = 10
 
         /** Max/Targeted time to sleep between loops (milliseconds)
@@ -229,8 +231,7 @@ class InstancesManager
     }
 
 
-    //Instance File Watcher Service
-    private var instDirWatchService: WatchService = FileSystems.getDefault().newWatchService()
+
 
     private suspend fun runDirectoryWatcherLoop() = withContext(instanceReaderDispatcher) {
         LOGGER.trace { "DirectoryWatcher: Loop Start" }
@@ -248,6 +249,9 @@ class InstancesManager
             }
             .catch { LOGGER.debug { "DirectoryWatcher: Error with initial File check: ${it.message}" } }
             .collect()
+
+        //Instance File Watcher Service
+        val instDirWatchService: WatchService = FileSystems.getDefault().newWatchService()
 
 
         //Start Watching Directory
@@ -278,18 +282,16 @@ class InstancesManager
                             emit(eventPath)
                         }
                     }
-                    .onEach { path ->
+                    .collect { path ->
                         //Process File
                         processInstanceFileCreateModify(path)
                     }
-                    .collect()
 
                 // Reset key for next loop, if it fails loop ends
                 check(instDirLoopKey.reset()) { "Folder Watch Key no longer Valid" }
 
                 //Calculate loop time and delay before next loop
-                val loopEndTime = Instant.now().epochSecond
-                val loopTimeSeconds = loopEndTime - loopStartTime
+                val loopTimeSeconds = Instant.now().epochSecond - loopStartTime
                 var delayTimeMSec =
                     READ_LOOP_DELAY_MAX_MS - (loopTimeSeconds * 1000) //Start time minus End Time = Seconds Passed
                 when {
@@ -320,8 +322,6 @@ class InstancesManager
     private suspend fun runInstanceCheckerLoop() = withContext(instanceCheckerDispatcher) {
         LOGGER.trace { "InstanceChecker: coroutineScope Start" }
 
-        val instancesToRemove = HashSet<Instance>()
-
         try {
 
             while (watcherActive && isActive) {
@@ -329,7 +329,6 @@ class InstancesManager
                 delay(READ_LOOP_DELAY_MAX_MS)
                 val loopStartTime = Instant.now().epochSecond
 
-                instancesToRemove.clear()
 
                 LOGGER.trace { "InstanceChecker: Waiting for Sync on instancesMap" }
 
@@ -337,25 +336,21 @@ class InstancesManager
                     /* Sync Block Start */
                     LOGGER.trace { "InstanceChecker: Acquired Sync Lock on instancesMap" }
 
-                    //Get Instances to Remove
-                    for (instance in instancesMap.values) {
-                        if (instance.fileLastModified < getUnixTime() - READ_TIMEOUT_SEC) {
-                            //Instance has aged out without file refresh
-                            instancesToRemove.add(instance)
-                        }
-                    }
+                    val instMapIterator = instancesMap.iterator()
 
-                    //Process Instances to Remove
-                    for (instance in instancesToRemove) {
-                        instancesMap.remove(instance.id)
-                        instanceEventListener.onInstanceEnd(instance.id)
+                    // Find Instances to Remove and process
+                    for (instanceEntry in instMapIterator) {
+                        if (instanceEntry.value.fileLastModified < getUnixTime() - READ_TIMEOUT_SEC) {
+                            //Instance has aged out without file refresh, trigger end and remove from map
+                            instanceEventListener.onInstanceEnd(instanceEntry.value.id)
+                            instMapIterator.remove()
+                        }
                     }
 
                     /* Sync Block End */
                 }
 
-                val loopEndTime = Instant.now().epochSecond
-                val loopTimeSeconds = loopEndTime - loopStartTime
+                val loopTimeSeconds = Instant.now().epochSecond - loopStartTime
                 LOGGER.trace { "InstanceChecker: Loop took $loopTimeSeconds Seconds, Delaying ${READ_LOOP_DELAY_MAX_MS / 1000f} Seconds before next check" }
             }
 
@@ -373,13 +368,11 @@ class InstancesManager
 
     }
 
+
     /** Function to clean up after instMgrJob */
     private fun cleanup() {
         LOGGER.trace { "Instance Manager Cleanup Start" }
         watcherActive = false
-
-        LOGGER.trace { "Closing WatchService" }
-        runCatching { instDirWatchService.close() }
 
         LOGGER.trace { "Closing DirectoryWatcher Job" }
         runCatching { watcherJob?.cancel("Instances Manager is Closing") }
