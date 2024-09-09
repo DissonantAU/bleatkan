@@ -1,4 +1,5 @@
 import org.gradle.jvm.tasks.Jar
+import org.jetbrains.kotlin.utils.addToStdlib.ifFalse
 
 
 plugins {
@@ -16,12 +17,15 @@ val versionMajor: Int = 0
 val versionMinor: Int = 5
 val versionPatch: Int = 0 //Is padded with 0 left if needed
 
+val isRelease = System.getenv("IS_RELEASE") == "YES"
+val versionSuffix:String = isRelease.ifFalse { "-DEV" }.orEmpty()
+
 // Version becomes 1203
 val versionCode: Int = versionMajor * 1000 + versionMinor * 100 + versionPatch
 extra["versionCode"] = versionCode
 
 // Version becomes 1.2.03 (Or 1.2.03-DEV etc.)
-val versionName: String = "$versionMajor.$versionMinor.${versionPatch.toString().padStart(2, '0')}-DEV"
+val versionName: String = "$versionMajor.$versionMinor.${versionPatch.toString().padStart(2, '0')}$versionSuffix"
 extra["versionName"] = versionName
 version = versionName
 
