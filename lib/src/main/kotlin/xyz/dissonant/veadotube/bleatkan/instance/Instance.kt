@@ -12,23 +12,26 @@ import java.nio.charset.StandardCharsets
  * Holds *ID* [InstanceID], *Server*, & *Name* values.
  * Can Generate a WebSocket [URI]
  *
+ * InstancesManager uses lastModified in the extended contructior for storing the timestamp in the Instance File, and for clearing stale Instances
  *
- * Based on [Veadotube bleatcan Instance.cs on Gitlab](https://gitlab.com/veadotube/bleatcan/-/blob/b1d4faf70138c1e839b449c3cf799b6fd59c837b/bleatcan/Instance.cs)
+ * Instance(id = [InstanceID], name = [String], server = [String], lastModified = [Long]) should be preferred
  *
- * @see URI
+ * Originally Based on [Veadotube bleatcan Instance.cs on Gitlab](https://gitlab.com/veadotube/bleatcan/-/blob/b1d4faf70138c1e839b449c3cf799b6fd59c837b/bleatcan/Instance.cs)
+ *
+ * @param id [InstanceID] for Instance
+ * @param name Name of Instance (Title Name from Instance File)
+ * @param server Server connection Address & Port
  *
  * @see InstanceID
  */
 @Suppress("MemberVisibilityCanBePrivate", "unused")
-class Instance(instanceID: InstanceID, instanceName: String, serverAddress: String, lastModified:Long=-1) {
+data class Instance(
     /**
-     * Instance ID
+     * Instance ID for this Instance (from File Name)
      *
      * @see InstanceID
      */
-    val id: InstanceID
-
-
+    val id: InstanceID,
     /**
      * Client Display Name (For example "veadotube mini")
      *
@@ -37,9 +40,7 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      * In this case the connection may close, or may not fail until next request
      * The instance file will update, but connections may need updating, closing, reopening, etc.
      */
-    val name: String
-
-
+    val name: String,
     /**
      * Server IP and Port separated with a colon (For example "127.0.0.1:12345")
      *
@@ -49,6 +50,7 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      * The instance file will update, but connections may need updating, closing, reopening, etc.
      */
     val server: String
+) {
 
 
     /**
@@ -56,7 +58,7 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      * Last retrieved Time Value from Instance file
      * Anything older than 10 seconds should be assumed dead and removed
      */
-    var fileLastModified: Long
+    var fileLastModified: Long = Long.MIN_VALUE
         internal set
 
 
@@ -71,20 +73,19 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
 
 
     init {
-        require(instanceID.type.isNotEmpty()) { "InstanceID is not Valid" }
-        require(instanceName.isNotBlank()) { "instanceName is blank" }
-        require(serverAddress.isNotBlank()) { "serverAddress is blank" }
-
-        id = instanceID
-        name = instanceName
-        server = serverAddress
-        fileLastModified = lastModified
+        require(id.type.isNotEmpty()) { "InstanceID is not Valid" }
+        require(name.isNotBlank()) { "instanceName is blank" }
+        require(server.isNotBlank()) { "serverAddress is blank" }
 
         instanceConnectionID = "$name-${server}_${id}"
     }
 
-    fun propertiesEqual(i: Instance): Boolean {
-        return name == i.name && server == i.server && id == i.id
+    constructor(id: InstanceID, name: String, server: String, lastModified: Long) : this(
+        id = id,
+        name = name,
+        server = server
+    ) {
+        fileLastModified = lastModified
     }
 
     /**
@@ -132,10 +133,6 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      */
     fun connect(listener: ConnectionListener): Connection {
         return Connection(this, listener)
-    }
-
-    override fun toString(): String {
-        return "Instance(instanceConnectionID='$instanceConnectionID', id=$id, name='$name', server='$server', fileLastModified=$fileLastModified)"
     }
 
     companion object {
