@@ -10,40 +10,42 @@ import xyz.dissonant.veadotube.bleatkan.instance.*
 import xyz.dissonant.veadotube.bleatkan.message.ResultMessage
 
 
-
-class TestReceiver : InstancesReceiver, ConnectionListener {
+class TestListener : InstancesListener, ConnectionListener {
 
     private val logger = KotlinLogging.logger {}
 
     private val instanceMap = ConcurrentHashMap<InstanceID, Instance>()
 
-    //private val connectionMap = ConcurrentHashMap<String, Connection>()
+    private val connectionMap = ConcurrentHashMap<Instance, Connection>()
 
-        fun getInstances(): Map<InstanceID, Instance> {
-        return instanceMap.toMap()
-    }
+    /* Instances Manager Events */
 
-    /*  */
-
-    override fun onStart(instance: Instance) {
-        logger.debug { "TestReceiver: onStart '${instance}'" }
+    override fun onInstanceStart(instance: Instance) {
+        logger.debug { "TestReceiver: onInstanceStart '${instance}'" }
         instanceMap[instance.id] = instance
 
-        //val connection: Connection = Connection(instance.server!!,instance.name!!,this)
-        //connection.runWS()
+        //Create a connection
+        val connection = Connection(
+            instance = instance,
+            receiver = this,
+        )
+
+        connectionMap[instance] = connection
     }
 
-    override fun onChange(instance: Instance, oldInstance: Instance) {
-        logger.debug { "TestReceiver: onChange > instance: ${instance}, oldInstance: $oldInstance" }
+    override fun onInstanceChange(instance: Instance, oldInstance: Instance) {
+        logger.debug { "TestReceiver: onInstanceChange > instance: ${instance}, oldInstance: $oldInstance" }
         instanceMap[instance.id] = instance
     }
 
-    override fun onEnd(id: InstanceID) {
-        logger.debug { "TestReceiver: onEnd '${id}'" }
-        instanceMap.remove(id)
+    override fun onInstanceEnd(id: InstanceID) {
+        logger.debug { "TestReceiver: onInstanceEnd '${id}'" }
+        val closingInstance = instanceMap.remove(id)
+        val closingConnection = connectionMap.remove(closingInstance)
+        closingConnection?.close()
     }
 
-    /*  */
+    /* Connection Events */
 
     override fun onConnectionError(connection: Connection, error: ConnectionError) {
         logger.debug { "TestReceiver: onConnectionError '$connection',error: '$error'" }

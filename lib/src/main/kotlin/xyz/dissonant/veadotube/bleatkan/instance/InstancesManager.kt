@@ -27,7 +27,7 @@ import kotlin.io.path.name
 @Suppress("unused")
 class InstancesManager
 @JvmOverloads constructor(
-    receiver: InstancesReceiver,
+    receiver: InstancesListener,
     managerJobParent: Job? = null
 ) : AutoCloseable {
 
@@ -105,7 +105,8 @@ class InstancesManager
     /** Mutex for Instances Map */
     private val instancesMapMutex = Mutex()
 
-    private val instanceEventReceiver: InstancesReceiver = receiver
+    /** Event Listener that should receive Start/Change/End events */
+    private val instanceEventListener: InstancesListener = receiver
 
 
     /** Watcher is set to active when loop is enabled, and loop will run while it's true */
@@ -202,11 +203,11 @@ class InstancesManager
 
                                 LOGGER.debug { "processInstanceFile: Existing instance updated - ${existingInstance.toString()}" }
 
-                                instanceEventReceiver.onChange(newInstanceObj, existingInstance)
+                                instanceEventListener.onInstanceChange(newInstanceObj, existingInstance)
                             }
                         } else {
                             LOGGER.debug { "processInstanceFile: New instance added - $existingInstance" }
-                            instanceEventReceiver.onStart(existingInstance)
+                            instanceEventListener.onInstanceStart(existingInstance)
                         }
                     }
 
@@ -347,7 +348,7 @@ class InstancesManager
                     //Process Instances to Remove
                     for (instance in instancesToRemove) {
                         instancesMap.remove(instance.id)
-                        instanceEventReceiver.onEnd(instance.id)
+                        instanceEventListener.onInstanceEnd(instance.id)
                     }
 
                     /* Sync Block End */
@@ -365,7 +366,7 @@ class InstancesManager
             instancesMapMutex.withLock {
                 for (instance in instancesMap.values) {
                     instancesMap.remove(instance.id)
-                    instanceEventReceiver.onEnd(instance.id)
+                    instanceEventListener.onInstanceEnd(instance.id)
                 }
             }
         }
