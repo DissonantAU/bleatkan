@@ -45,7 +45,7 @@ import kotlin.collections.HashMap
 class Connection
 @JvmOverloads constructor(
     instance: Instance,
-    receiver: ConnectionReceiver,
+    receiver: ConnectionListener,
     name: String? = null,
     connectionJobParent: Job = Job(connectionDefaultJobParent)
 ) : AutoCloseable {
@@ -92,7 +92,7 @@ class Connection
     }
 
 
-    private val connectionReceiver: ConnectionReceiver = receiver
+    private val connectionListener: ConnectionListener = receiver
 
     /**
      * Instance this Connection is connected to
@@ -203,7 +203,7 @@ class Connection
             this.instance.getWebSocketUri(this.name)
             connUri = Instance.getWebSocketUri(this.server, this.name)
         } catch (ex: IllegalArgumentException) {
-            receiver.onError(this, ConnectionError.InvalidServerOrName)
+            receiver.onConnectionError(this, ConnectionError.InvalidServerOrName)
             throw ex
         }
 
@@ -384,17 +384,17 @@ class Connection
 
                     if (ex is ConnectException) {
                         LOGGER.trace { "runWebsocketWatcher: Error connecting to $connUri - Invalid Server or Name, or Server has Closed" }
-                        connectionReceiver.onError(this, ConnectionError.FailedToConnect)
+                        connectionListener.onConnectionError(this, ConnectionError.FailedToConnect)
                     } else {
                         LOGGER.trace { "runWebsocketWatcher: Connection Error with $connUri" }
-                        connectionReceiver.onError(this, ConnectionError.None)
+                        connectionListener.onConnectionError(this, ConnectionError.None)
                     }
 
                     if (errorCount >= WS_CONN_ERROR_MAX) {
                         //Max Retries Reached
                         LOGGER.warn { "runWebsocketWatcher: Max Reconnect Retries to $connUri reached" }
                         activeLoop = false
-                        connectionReceiver.onError(this, ConnectionError.ExceededRetries)
+                        connectionListener.onConnectionError(this, ConnectionError.ExceededRetries)
                         throw ex
                     }
 
@@ -421,7 +421,7 @@ class Connection
                 // Websocket has quit, so we need to clean up
                 if (isConnected) {
                     // Post-Disconnect Tear-down, etc.
-                    connectionReceiver.onConnect(this, false)
+                    connectionListener.onConnectionChange(this, false)
                     //updateClients(isConnected) // clientsMap not currently used
                     isConnected = false
                     LOGGER.trace { "runWebsocketWatcher: Socket Cleanup done " }
@@ -465,11 +465,10 @@ class Connection
 
         // WebSocket Session has to be connected to get here, if isConnected is false, we need to do Post-Connect Setup
         if (!isConnected) {
-            LOGGER.trace { "runWebsocketReceiver: WS Active & isConnected is false > onConnect start " }
-            connectionReceiver.onConnect(this, true)
+            LOGGER.trace { "runWebsocketReceiver: Socket Active,isConnected is false > do Post-Connect actions" }
+            connectionListener.onConnectionChange(this, true)
             //updateClients(isConnected) // clientsMap not currently used
             isConnected = true
-            LOGGER.trace { "runWebsocketReceiver: WS Active & isConnected is false > onConnect done " }
         }
 
 
@@ -649,7 +648,7 @@ class Connection
 
     private fun passReceivedToClients(message: ResultMessage) {
         try {
-            connectionReceiver.onReceive(this, message)
+            connectionListener.onConnectionReceive(this, message)
         } catch (ex: Exception) {
             LOGGER.warn { "passReceivedToClients: Exception passing Message to ConnectionReceiver: ${ex.message}" }
         }

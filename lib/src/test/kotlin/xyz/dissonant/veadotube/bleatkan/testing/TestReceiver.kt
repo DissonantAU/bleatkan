@@ -11,7 +11,7 @@ import xyz.dissonant.veadotube.bleatkan.message.ResultMessage
 
 
 
-class TestReceiver : InstancesReceiver, ConnectionReceiver {
+class TestReceiver : InstancesReceiver, ConnectionListener {
 
     private val logger = KotlinLogging.logger {}
 
@@ -45,16 +45,16 @@ class TestReceiver : InstancesReceiver, ConnectionReceiver {
 
     /*  */
 
-    override fun onError(connection: Connection, error: ConnectionError) {
-        logger.debug { "TestReceiver: onError '$connection',error: '$error'" }
+    override fun onConnectionError(connection: Connection, error: ConnectionError) {
+        logger.debug { "TestReceiver: onConnectionError '$connection',error: '$error'" }
     }
 
-    override fun onConnect(connection: Connection, active: Boolean) {
-        logger.debug { "TestReceiver: onConnect '$connection', active: '$active'" }
+    override fun onConnectionChange(connection: Connection, active: Boolean) {
+        logger.debug { "TestReceiver: onConnectionChange '$connection', active: '$active'" }
     }
 
-    override fun onReceive(connection: Connection, channel: String, data: ResultMessage) {
-        logger.debug { "TestReceiver: onConnect '$connection', data: '$data'" }
+    override fun onConnectionReceive(connection: Connection, message: ResultMessage) {
+        logger.debug { "TestReceiver: onConnectionChange '$connection', data: '$message'" }
     }
 
 }

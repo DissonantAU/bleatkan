@@ -1,7 +1,7 @@
 package xyz.dissonant.veadotube.bleatkan.instance
 
 import xyz.dissonant.veadotube.bleatkan.connection.Connection
-import xyz.dissonant.veadotube.bleatkan.connection.ConnectionReceiver
+import xyz.dissonant.veadotube.bleatkan.connection.ConnectionListener
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -106,25 +106,20 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      */
 
     fun getWebSocketUri(name: String): URI {
-        val nameTrim = name.trim()
-        require(nameTrim.isNotBlank()) { "Name must not be blank" }
-
-        return getWebSocketUri(server, nameTrim)
+        require(name.isNotBlank()) { "Name must not be blank" }
+        return getWebSocketUri(server, name)
     }
 
     /**
      * Returns a new Connection on the Instance Server for the Given Name and Receiver
      *
      * @param name     Client Display Name (e.g. "veadotube mini")
-     * @param receiver Object to be sent events by Connection Object
+     * @param listener Object to be sent events by Connection Object
      * @return Connection
      */
-    fun connect(name: String, receiver: ConnectionReceiver): Connection {
-
-        val nameTrim = name.trim()
-        require(nameTrim.isNotBlank()) { "Name must not be blank" }
-
-        return Connection(this, receiver, nameTrim)
+    fun connect(name: String, listener: ConnectionListener): Connection {
+        require(name.isNotBlank()) { "Name must not be blank" }
+        return Connection(this, listener, name)
     }
 
     /**
@@ -132,11 +127,11 @@ class Instance(instanceID: InstanceID, instanceName: String, serverAddress: Stri
      *
      * Equivalent of Connection(instance (this), receiver)
      *
-     * @param receiver Object to be sent events by Connection Object
+     * @param listener Object to be sent events by Connection Object
      * @return Connection
      */
-    fun connect(receiver: ConnectionReceiver): Connection {
-        return Connection(this, receiver)
+    fun connect(listener: ConnectionListener): Connection {
+        return Connection(this, listener)
     }
 
     override fun toString(): String {

@@ -3,9 +3,11 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+.kotlin/
+
 
 ### IntelliJ IDEA ###
-/.idea/
+.idea/
 .idea/libraries/
 *.iws
 *.iml
@@ -72,3 +74,4 @@ replay_pid*
 
 
 /lib/src/main/kotlin/xyz/dissonant/veadotube/bleatkan/testing/
+
