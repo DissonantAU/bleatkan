@@ -224,25 +224,9 @@ class Connection
             LOGGER.trace { "Connection Constructor: Launch runWebsocketReceive() in $websocketScope" }
 
             //Run in different scope/context, allowing RunBlock to exit
-            websocketScope.async {
+            websocketScope.launch {
                 LOGGER.trace { "Connection Constructor async: Launching runWebsocketReceive()" }
                 runWebsocketWatcher()
-            }.invokeOnCompletion {
-                if (it == null) {
-                    //Closed without Error
-                    LOGGER.trace { "runWebsocketWatcher OnCompletion: Closed Normally" }
-                } else {
-                    if (it.cause is CancellationException) {
-                        //Closed, Normal with Cancellation
-                        LOGGER.trace { "runWebsocketWatcher OnCompletion: Closed Normally with Cancellation" }
-                    } else {
-                        //Closed with error
-                        LOGGER.warn { "runWebsocketWatcher OnCompletion: Closed with Error: ${it.message}" }
-                        stopWebsocket(closeReason = CloseReason.Codes.INTERNAL_ERROR, "Error: ${it.message}")
-                    }
-                }
-                //Close/Cleanup this Connection
-                close()
             }
             LOGGER.trace { "Connection Constructor: Launched runWebsocketWatcher" }
         }
@@ -344,43 +328,33 @@ class Connection
     private suspend fun runWebsocketWatcher() {
         LOGGER.trace { "runWebsocketWatcher: Started" }
 
+        var closeReason: CloseReason? = null
         var errorCount = 0
 
-        while (activeLoop) {
-            /* Start Websocket Loop Block */
-            LOGGER.trace { "runWebsocketWatcher: Start of Loop - webSocketSession Active? ${webSocketSession?.isActive ?: false} " }
+        try {
 
-            try {
-                LOGGER.trace { "runWebsocketWatcher: Launch startWebsocket in $websocketScope" }
+            while (activeLoop && websocketScope.isActive) {
+                /* Start Websocket Loop Block */
 
-                //Launch Websocket & Receiver
-                val receiver = websocketScope.async { startWebsocketSession() }
+                try {
+                    LOGGER.trace { "runWebsocketWatcher: Launch startWebsocket in $websocketScope" }
 
-                // Suspend until exit
-                receiver.await()
+                    //Launch Websocket & Receiver
+                    val receiver = websocketScope.async { startWebsocketSession() }
 
-                // Reset Error Count (if await doesn't Error)
-                errorCount = 0
+                    // Suspend until exit
+                    try {
+                        receiver.await()
+                    } finally {
+                        closeReason = webSocketCloseReason?.await()
+                    }
 
-            } catch (ex: CancellationException) {
-                // Exception - being closed, should quit
-                LOGGER.trace { "runWebsocketWatcher: startWebsocket was cancelled" }
-                activeLoop = false
-            } catch (ex: Exception) {
-                // Other Exception
-                val closeReason = webSocketCloseReason?.await()
-
-                if (closeReason?.knownReason == CloseReason.Codes.NORMAL || closeReason?.knownReason == CloseReason.Codes.GOING_AWAY) {
-                    // Exception was thrown, but was closed normally from other side
-                    LOGGER.trace { "runWebsocketWatcher: Closing > $closeReason" }
-                    LOGGER.trace { "runWebsocketWatcher: Exception was thrown, but closure was normal ${ex.javaClass} - ${ex.message}" }
-
+                } catch (ex: CancellationException) {
+                    // CancellationException - Upstream Job is being closed, we should quit
+                    LOGGER.trace { "runWebsocketWatcher: startWebsocket was cancelled" }
                     activeLoop = false
-                } else {
-                    errorCount++
-
-                    LOGGER.trace { "runWebsocketWatcher: Closing With Exception Reason: $closeReason" }
-                    LOGGER.trace { "runWebsocketWatcher: Error ($errorCount in a row) ${ex.javaClass} - ${ex.message}" }
+                } catch (ex: Exception) {
+                    // Other Exception
 
                     if (ex is ConnectException) {
                         LOGGER.trace { "runWebsocketWatcher: Error connecting to $connUri - Invalid Server or Name, or Server has Closed" }
@@ -390,50 +364,63 @@ class Connection
                         connectionListener.onConnectionError(this, ConnectionError.None)
                     }
 
-                    if (errorCount >= WS_CONN_ERROR_MAX) {
+                    LOGGER.trace { "runWebsocketWatcher: Closing With Exception Reason: $closeReason" }
+                    LOGGER.trace { "runWebsocketWatcher: Error (${errorCount + 1} in a row) - ${ex.stackTraceToString()}" }
+
+                } finally {
+
+                    when (closeReason?.knownReason) {
+                        CloseReason.Codes.NORMAL, CloseReason.Codes.GOING_AWAY -> {
+                            activeLoop = false
+                        }
+
+                        CloseReason.Codes.byCode(1006) -> {
+                            //Closed Abnormally - Happens when Veadotube Mini Closes - we don't seem to get a close frame, or KTOR Hides it and give us this
+                            LOGGER.trace { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube may have closed normally, or may have crashed" }
+                        }
+
+                        else -> {
+                            LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > $closeReason" }
+                        }
+                    }
+
+                    if (++errorCount >= WS_CONN_ERROR_MAX) {
                         //Max Retries Reached
                         LOGGER.warn { "runWebsocketWatcher: Max Reconnect Retries to $connUri reached" }
                         activeLoop = false
                         connectionListener.onConnectionError(this, ConnectionError.ExceededRetries)
-                        throw ex
                     }
 
-                    delay(WS_CONN_ERROR_WAIT_MS)
+                    webSocketSession = null
+
+                    // Websocket has quit, so we need to clean up
+                    if (isConnected) {
+                        // Post-Disconnect Tear-down, etc.
+                        connectionListener.onConnectionChange(this, false)
+                        //updateClients(isConnected) // clientsMap not currently used
+                        isConnected = false
+                        LOGGER.trace { "runWebsocketWatcher: Listener Cleanup done" }
+                    }
+
+                    // Wait if Loop is still Active
+                    if (activeLoop) delay(WS_CONN_ERROR_WAIT_MS * errorCount)
+
                 }
-            } finally {
-                val closeReason = webSocketCloseReason?.await()
-
-                if (closeReason?.knownReason == CloseReason.Codes.NORMAL || closeReason?.knownReason == CloseReason.Codes.GOING_AWAY) {
-                    LOGGER.trace { "runWebsocketWatcher: Closing > $closeReason" }
-                } else if (closeReason?.message == "Connection was closed without close frame") {
-                    //Happens when Veadotube Mini Closes - we don't seem to get a close message, or KTOR Hides it and give us this
-                    errorCount++
-                    LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame" }
-
-                    delay(WS_CONN_ERROR_WAIT_MS)
-                } else {
-                    errorCount++
-                    LOGGER.debug { "runWebsocketWatcher: Closing Abnormally > $closeReason" }
-                }
-
-                webSocketSession = null
-
-                // Websocket has quit, so we need to clean up
-                if (isConnected) {
-                    // Post-Disconnect Tear-down, etc.
-                    connectionListener.onConnectionChange(this, false)
-                    //updateClients(isConnected) // clientsMap not currently used
-                    isConnected = false
-                    LOGGER.trace { "runWebsocketWatcher: Socket Cleanup done " }
-                }
+                /* End Websocket Loop Block */
             }
-            /* End Websocket Loop Block */
+
+        } catch (ex: CancellationException) {
+            // CancellationException - Upstream Job is being closed, we should quit (Mainly to catch a Cancelled Delay)
+            LOGGER.trace { "runWebsocketWatcher: startWebsocket was cancelled" }
+        } finally {
+            //Cleanup this Connection
+            cleanupConnection()
         }
 
         LOGGER.trace { "runWebsocketWatcher: Ended" }
     }
 
-    // New Setup
+
     private suspend fun startWebsocketSession() {
         LOGGER.trace { "startWebsocketSession: Connecting: $connUri (${connUri.host}, ${connUri.port}, ${connUri.rawPath}?${connUri.rawQuery})" }
         check(httpClient != null && httpClient!!.isActive) { "HttpClient is not active" }
@@ -473,39 +460,46 @@ class Connection
 
 
         /* Start Get and Process Message Block*/
+        try {
+            incomingFrames.receiveAsFlow().cancellable()
+                .onStart { LOGGER.trace { "WebsocketReceiverFlow: Started Receiving Frames from $connUri" } }
+                .onCompletion { LOGGER.trace { "WebsocketReceiverFlow: Stopped Receiving Frames from $connUri" } }
+                .transform { frame ->
+                    // Get Frame and emit message content If it should be processed
+                    when (frame) {
+                        is Frame.Text -> {
+                            // Should only receive Text/JSON from Veadotube, but processing is done using the ByteArray from the frame
+                            val messageBytes =
+                                frame.data //Get ByteArray instead of using readBytes, so we don't duplicate it the data
+                            LOGGER.trace { "WebsocketReceiverFlow: ${frame.frameType} Frame with ${frame.data.size} Bytes" }
 
-        incomingFrames.receiveAsFlow().cancellable()
-            .onStart { LOGGER.trace { "WebsocketReceiverFlow: Started Receiving Frames from $connUri" } }
-            .onCompletion { LOGGER.trace { "WebsocketReceiverFlow: Stopped Receiving Frames from $connUri" } }
-            .transform { frame ->
-                // Get Frame and emit message content If it should be processed
-                when (frame) {
-                    is Frame.Text -> {
-                        // Should only receive Text/JSON from Veadotube, but processing is done using the ByteArray from the frame
-                        val messageBytes =
-                            frame.data //Get ByteArray instead of using readBytes, so we don't duplicate it the data
-                        LOGGER.trace { "WebsocketReceiverFlow: ${frame.frameType} Frame with ${frame.data.size} Bytes" }
+                            emit(messageBytes)
+                        }
 
-                        emit(messageBytes)
+                        else -> {
+                            // Should never happen without Raw Socket
+                            LOGGER.debug { "WebsocketReceiverFlow: Received unexpected Frame - ${frame.frameType} Frame with ${frame.data.size} Bytes" }
+                        }
                     }
-
-                    else -> {
-                        // Should never happen without Raw Socket
-                        LOGGER.debug { "WebsocketReceiverFlow: Received unexpected Frame - ${frame.frameType} Frame with ${frame.data.size} Bytes" }
-                    }
+                }.buffer(5) // Buffer Messages to Process
+                .transform { messageBytes ->
+                    // Process message, emit if successful
+                    val processed = processReceivedMessage(messageBytes)
+                    if (processed != null) emit(processed)
+                }.buffer(5) //Buffer up to 5 Messages to Pass
+                .onEach { message ->
+                    // Pass along to Listeners, etc
+                    passReceivedToClients(message)
                 }
-            }.buffer(5) // Buffer Messages to Process
-            .transform { messageBytes ->
-                // Process message, emit if successful
-                val processed = processReceivedMessage(messageBytes)
-                if (processed != null) emit(processed)
-            }.buffer(5) //Buffer up to 5 Messages to Pass
-            .onEach { message ->
-                // Pass along to Listeners, etc
-                passReceivedToClients(message)
-            }
-            .collect()
-
+                .collect()
+        } catch (ex: CancellationException) {
+            // CancellationException - Incoming Stream Was cancelled
+            LOGGER.trace { "runWebsocketReceiver: Websocket ReceiveChannel was cancelled" }
+            activeLoop = false
+        } catch (ex: Exception) {
+            // Other Exception - Just Log it
+            LOGGER.trace { "runWebsocketReceiver: Exception: ${ex.message} - ${ex.cause}\n${ex.stackTraceToString()}" }
+        }
         /* End Get and Process Message Block*/
 
         LOGGER.trace { "runWebsocketReceiver: Ended" }
@@ -667,6 +661,14 @@ class Connection
     }
 
 
+    private fun cleanupConnection() {
+        LOGGER.trace { "cleanupConnection: stopWebsocket()" }
+        stopWebsocket()
+
+        LOGGER.trace { "cleanupConnection: activeLoop false" }
+        activeLoop = false
+    }
+
     @Synchronized
     override fun close() {
         if (!isClosed) {
@@ -674,15 +676,10 @@ class Connection
 
             LOGGER.trace { "Connection Closing" }
 
-            LOGGER.trace { "Connection Close: activeLoop false" }
-            activeLoop = false
-
-            LOGGER.trace { "Connection Close: stopWebsocket()" }
-            stopWebsocket()
+            cleanupConnection()
 
             LOGGER.trace { "Connection Close: client Close Check" }
             shutdownHttpClient()
-
 
             LOGGER.trace { "Connection Closed" }
         }
