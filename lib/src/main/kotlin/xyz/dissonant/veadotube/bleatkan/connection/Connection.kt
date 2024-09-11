@@ -16,6 +16,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.*
 
 import xyz.dissonant.veadotube.bleatkan.instance.Instance
+import xyz.dissonant.veadotube.bleatkan.instance.InstancesManager.Companion.READ_LOOP_DELAY_MAX_MS
 import xyz.dissonant.veadotube.bleatkan.message.*
 import java.net.ConnectException
 
@@ -60,7 +61,7 @@ class Connection
         /**
          * Maximum Connection Errors in a row before giving up and
          */
-        private const val WS_CONN_ERROR_MAX: Int = 10
+        private const val WS_CONN_ERROR_MAX: Int = 5
 
         /**
          * Wait timer after connection error
@@ -185,6 +186,7 @@ class Connection
     private var activeLoop = false
     var isConnected = false
         private set
+
     var isClosed = false
         private set
 
@@ -214,24 +216,18 @@ class Connection
 
         connectionTimeMillis = System.currentTimeMillis()
 
-        LOGGER.trace { "Connection Constructor: RunBlock Start" }
+        setupHttpClient()
 
-        runBlocking {
-            setupHttpClient()
+        activeLoop = true
 
-            activeLoop = true
+        LOGGER.trace { "Connection Constructor: Launch runWebsocketReceive() in $websocketScope" }
 
-            LOGGER.trace { "Connection Constructor: Launch runWebsocketReceive() in $websocketScope" }
-
-            //Run in different scope/context, allowing RunBlock to exit
-            websocketScope.launch {
-                LOGGER.trace { "Connection Constructor async: Launching runWebsocketReceive()" }
-                runWebsocketWatcher()
-            }
-            LOGGER.trace { "Connection Constructor: Launched runWebsocketWatcher" }
+        //Run in different scope, allowing constructor to exit
+        websocketScope.launch {
+            runWebsocketWatcher()
         }
 
-        LOGGER.trace { "Connection Constructor: RunBlock Done" }
+        LOGGER.trace { "Connection Constructor: Done" }
 
     }
 
@@ -240,8 +236,8 @@ class Connection
         LOGGER.trace { "Connection Constructor: HTTPClient Creation Start" }
 
         runBlocking {
-            //Lock to prevent Concurrent Creation/Destruction
 
+            //Lock to prevent Concurrent Creation/Destruction
             httpClientMutex.withLock(this) {
                 //Client Setup
                 if (httpClient?.isActive != true) {
@@ -270,6 +266,7 @@ class Connection
                     LOGGER.trace { "Connection Constructor: httpClient created" }
                 }
             }
+
         }
 
         LOGGER.trace { "Connection Constructor: HTTPClient Creation End" }
@@ -337,15 +334,14 @@ class Connection
                 /* Start Websocket Loop Block */
 
                 try {
-                    LOGGER.trace { "runWebsocketWatcher: Launch startWebsocket in $websocketScope" }
 
-                    //Launch Websocket & Receiver
-                    val receiver = websocketScope.async { startWebsocketSession() }
 
-                    // Suspend until exit
                     try {
-                        receiver.await()
+                        LOGGER.trace { "runWebsocketWatcher: Launch startWebsocket" }
+                        startWebsocketSession()
+
                     } finally {
+                        //Make sure we get Close Reason
                         closeReason = webSocketCloseReason?.await()
                     }
 
@@ -357,10 +353,10 @@ class Connection
                     // Other Exception
 
                     if (ex is ConnectException) {
-                        LOGGER.trace { "runWebsocketWatcher: Error connecting to $connUri - Invalid Server or Name, or Server has Closed" }
+                        LOGGER.debug { "runWebsocketWatcher: Error connecting to $connUri - Invalid Server or Name, or Server has Closed" }
                         connectionListener.onConnectionError(this, ConnectionError.FailedToConnect)
                     } else {
-                        LOGGER.trace { "runWebsocketWatcher: Connection Error with $connUri" }
+                        LOGGER.debug { "runWebsocketWatcher: Connection Error with $connUri" }
                         connectionListener.onConnectionError(this, ConnectionError.None)
                     }
 
@@ -369,26 +365,31 @@ class Connection
 
                 } finally {
 
-                    when (closeReason?.knownReason) {
-                        CloseReason.Codes.NORMAL, CloseReason.Codes.GOING_AWAY -> {
+                    if (!activeLoop) {
+                        //If loop not ended
+                        when (closeReason?.knownReason) {
+                            CloseReason.Codes.NORMAL, CloseReason.Codes.GOING_AWAY -> {
+                                activeLoop = false
+                            }
+
+                            CloseReason.Codes.byCode(1006) -> {
+                                //Closed Abnormally - Happens when Veadotube Mini Closes - we don't seem to get a close frame, or KTOR Hides it and give us this
+                                LOGGER.trace { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube probably closed, but may have crashed" }
+                                //Wait one Instance Manager Loop - If the Instance Closed/Crashed This connection should be cleaned up in around this time
+                                delay(READ_LOOP_DELAY_MAX_MS - WS_CONN_ERROR_WAIT_MS)
+                            }
+
+                            else -> {
+                                LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > $closeReason" }
+                            }
+                        }
+
+                        if (++errorCount >= WS_CONN_ERROR_MAX) {
+                            //Max Retries Reached
+                            LOGGER.warn { "runWebsocketWatcher: Max Reconnect Retries to $connUri reached" }
                             activeLoop = false
+                            connectionListener.onConnectionError(this, ConnectionError.ExceededRetries)
                         }
-
-                        CloseReason.Codes.byCode(1006) -> {
-                            //Closed Abnormally - Happens when Veadotube Mini Closes - we don't seem to get a close frame, or KTOR Hides it and give us this
-                            LOGGER.trace { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube may have closed normally, or may have crashed" }
-                        }
-
-                        else -> {
-                            LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > $closeReason" }
-                        }
-                    }
-
-                    if (++errorCount >= WS_CONN_ERROR_MAX) {
-                        //Max Retries Reached
-                        LOGGER.warn { "runWebsocketWatcher: Max Reconnect Retries to $connUri reached" }
-                        activeLoop = false
-                        connectionListener.onConnectionError(this, ConnectionError.ExceededRetries)
                     }
 
                     webSocketSession = null
@@ -576,7 +577,7 @@ class Connection
         // Add channel to messageObj for use in Flow
         messageObj.channel = channel
 
-        // Return Decoded Message to connectionReceiver, clients
+        // Return Decoded Message
         return messageObj
     }
 

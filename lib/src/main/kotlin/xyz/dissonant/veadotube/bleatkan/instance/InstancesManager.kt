@@ -43,7 +43,7 @@ class InstancesManager
         /** Max/Targeted time to sleep between loops (milliseconds)
          *
          * Actual Delay will be the ***largest*** of [READ_LOOP_DELAY_MAX_MS] minus `loop runtime`, and [READ_LOOP_DELAY_MIN_MS] */
-        const val READ_LOOP_DELAY_MAX_MS: Long = 2 * 1000
+        const val READ_LOOP_DELAY_MAX_MS: Long = 3 * 1000
 
         /** Minimum time to sleep between loops (milliseconds)*/
         const val READ_LOOP_DELAY_MIN_MS: Long = 100
@@ -55,10 +55,10 @@ class InstancesManager
         init {
 
             val dirHomeFolder: String = System.getProperty("user.home")
-            LOGGER.info { "Dir: Home Folder = '$dirHomeFolder'" }
+            LOGGER.trace { "Home Folder = '$dirHomeFolder'" }
 
             val dirVeadotubeInstances = Paths.get(dirHomeFolder, ".veadotube", "instances")
-            LOGGER.info { "Dir: Veadotube Instances Folder = '$dirVeadotubeInstances'" }
+            LOGGER.info { "Veadotube Instances Folder = '$dirVeadotubeInstances'" }
 
             // If it doesn't exist, create
             if (!dirVeadotubeInstances.toFile().isDirectory) {
@@ -150,7 +150,7 @@ class InstancesManager
             //Get Contents of file - not bothering with a buffered reader since it's a small file, and we're loading the whole thing
             val contents = FileReader(eventPath.toFile()).use { it.readText() }
 
-            LOGGER.trace { "processInstanceFile: Done reading $eventFilename" }
+            LOGGER.trace { "processInstanceFile: Done reading $eventFilename - ${contents.length} Chars" }
 
             try {
 
@@ -170,8 +170,11 @@ class InstancesManager
                     //Get Instance ID Object from Map, or Create if new
                     val instanceID = instancesIDMap.getOrPut(eventFilename) { InstanceID(eventFilename) }
 
+                    LOGGER.trace { "processInstanceFile: instancesMapMutex - Lock Waiting" }
+
                     instancesMapMutex.withLock {
                         /* Sync Block Start */
+                        LOGGER.trace { "processInstanceFile: instancesMapMutex - Lock Acquired" }
 
                         // Check if name is in map - if missing, create new Instance, add Instance ID and add to Map, set newInstance to True
                         var newInstance = false
@@ -211,9 +214,9 @@ class InstancesManager
                             LOGGER.debug { "processInstanceFile: New instance added - $existingInstance" }
                             instanceEventListener.onInstanceStart(existingInstance)
                         }
+
                     }
 
-                    LOGGER.trace { "processInstanceFile: $eventFilename Json - $vtInstance" }
                 }
             } catch (ex: SerializationException) {
                 /* Sometimes happens when the file happens to be read when it's still being written */
@@ -229,8 +232,6 @@ class InstancesManager
             LOGGER.debug { "processInstanceFile: $ex" }
         }
     }
-
-
 
 
     private suspend fun runDirectoryWatcherLoop() = withContext(instanceReaderDispatcher) {
@@ -263,10 +264,12 @@ class InstancesManager
             while (watcherActive && isActive) {
                 val loopStartTime = Instant.now().epochSecond
                 val instDirLoopKey: WatchKey = instDirWatchService.take()
+                var filesFound = false
 
-                LOGGER.trace { "DirectoryWatcher: Polling File Events" }
                 //Poll for changes in instances folder - does not block if not files found
-                instDirLoopKey.pollEvents().asFlow()
+                instDirLoopKey.pollEvents().asFlow().onStart {
+                    LOGGER.trace { "DirectoryWatcher: Poll File Events Start" }
+                }.onCompletion { LOGGER.trace { "DirectoryWatcher: Polling File Events" } }
                     .filterNot { event -> event.kind() === OVERFLOW }
                     .transform { event ->
                         // Resolve the filename from context of the event.
@@ -278,6 +281,7 @@ class InstancesManager
                         } else {
                             // For 'Create' or 'Modify' Event - Launches coroutine to get and process for each file
                             LOGGER.trace { "DirectoryWatcher: File Created or Modified: ${eventPath.name}" }
+                            filesFound = true
                             //Emit Path for processing
                             emit(eventPath)
                         }
@@ -298,6 +302,10 @@ class InstancesManager
                     (delayTimeMSec < READ_LOOP_DELAY_MIN_MS) -> delayTimeMSec = READ_LOOP_DELAY_MIN_MS //min wait
                     (delayTimeMSec > READ_LOOP_DELAY_MAX_MS) -> delayTimeMSec = READ_LOOP_DELAY_MAX_MS //max wait
                 }
+
+                // If no files processed this loop, double wait time
+                if (!filesFound) delayTimeMSec *= 2
+
                 LOGGER.trace { "DirectoryWatcher: Loop took $loopTimeSeconds Seconds, Delaying ${delayTimeMSec / 1000f} Seconds before next check" }
                 delay(delayTimeMSec)
             }
@@ -305,7 +313,7 @@ class InstancesManager
         } catch (ex: ClosedWatchServiceException) {
             LOGGER.trace { "DirectoryWatcher: WatchService Closed with ${ex.message}" }
         } catch (ex: Exception) {
-            LOGGER.warn { "DirectoryWatcher: Exception in DirectoryWatcher: ${ex.message}" }
+            LOGGER.debug { "DirectoryWatcher: Exception in DirectoryWatcher: ${ex.message}" }
         } finally {
             LOGGER.trace { "DirectoryWatcher: Finally Cleanup" }
             watcherActive = false
@@ -320,50 +328,60 @@ class InstancesManager
 
 
     private suspend fun runInstanceCheckerLoop() = withContext(instanceCheckerDispatcher) {
-        LOGGER.trace { "InstanceChecker: coroutineScope Start" }
+        LOGGER.trace { "InstanceChecker: Start" }
 
         try {
+            //Delay before loop
+            delay(READ_LOOP_DELAY_MAX_MS)
 
             while (watcherActive && isActive) {
-                //Delay before loop
-                delay(READ_LOOP_DELAY_MAX_MS)
                 val loopStartTime = Instant.now().epochSecond
 
 
-                LOGGER.trace { "InstanceChecker: Waiting for Sync on instancesMap" }
+                LOGGER.trace { "InstanceChecker: instancesMapMutex - Lock Waiting" }
 
                 instancesMapMutex.withLock {
                     /* Sync Block Start */
-                    LOGGER.trace { "InstanceChecker: Acquired Sync Lock on instancesMap" }
+                    LOGGER.trace { "InstanceChecker: instancesMapMutex - Lock Acquired" }
 
-                    val instMapIterator = instancesMap.iterator()
+                    if (instancesMap.isNotEmpty()) {
 
-                    // Find Instances to Remove and process
-                    for (instanceEntry in instMapIterator) {
-                        if (instanceEntry.value.fileLastModified < getUnixTime() - READ_TIMEOUT_SEC) {
-                            //Instance has aged out without file refresh, trigger end and remove from map
-                            instanceEventListener.onInstanceEnd(instanceEntry.value.id)
-                            instMapIterator.remove()
+                        val instMapIterator = instancesMap.iterator()
+
+                        // Find Instances to Remove and process
+                        for (instanceEntry in instMapIterator) {
+                            if (instanceEntry.value.fileLastModified < getUnixTime() - READ_TIMEOUT_SEC) {
+                                //Instance has aged out without file refresh, trigger end and remove from map
+                                instanceEventListener.onInstanceEnd(instanceEntry.value.id)
+                                instMapIterator.remove()
+                            }
                         }
+
                     }
 
                     /* Sync Block End */
                 }
 
+
                 val loopTimeSeconds = Instant.now().epochSecond - loopStartTime
-                LOGGER.trace { "InstanceChecker: Loop took $loopTimeSeconds Seconds, Delaying ${READ_LOOP_DELAY_MAX_MS / 1000f} Seconds before next check" }
+                val delayTimeMSec =
+                    if (instancesMap.isNotEmpty()) READ_LOOP_DELAY_MAX_MS else READ_LOOP_DELAY_MAX_MS * 2 // If no instances are in the map, double wait time
+                LOGGER.trace { "InstanceChecker: Loop took $loopTimeSeconds Seconds, Delaying ${delayTimeMSec / 1000f} Seconds before next check" }
+                delay(delayTimeMSec)
             }
 
         } finally {
             watcherActive = false
-            LOGGER.trace { "InstanceChecker: Finally" }
+
             //Cleanup
             instancesMapMutex.withLock {
                 for (instance in instancesMap.values) {
-                    instancesMap.remove(instance.id)
                     instanceEventListener.onInstanceEnd(instance.id)
                 }
+
+                instancesMap.clear()
             }
+            LOGGER.trace { "InstanceChecker: Cleanup Done" }
         }
 
     }
