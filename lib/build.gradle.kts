@@ -13,8 +13,8 @@ group = "xyz.dissonant.lib.veadotube"
 
 /* Version */
 val versionMajor: Int = 0
-val versionMinor: Int = 4
-val versionPatch: Int = 1 //Is padded with 0 left if needed
+val versionMinor: Int = 5
+val versionPatch: Int = 0 //Is padded with 0 left if needed
 
 // Version becomes 1203
 val versionCode: Int = versionMajor * 1000 + versionMinor * 100 + versionPatch
