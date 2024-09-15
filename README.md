@@ -6,7 +6,7 @@ Originally Created alongside the Touch Portal Veadotube Plugin, referencing the 
 ---
 
 ## Releases
-The latest version is 0.5.0 currently a beta release.  
+The latest version is 0.5.0 and currently a beta release.  
 
 
 - Very much a Work in Progress - stable enough for general use but hasn't been fully tested.
@@ -77,14 +77,14 @@ The Touch Portal Veadotube Plugin source code is the best example of use
 
 **Instances Manager**
 - Imports Instance Files and Manages Object Lifecycle
-- Monitors _\<user folder\>/.veadotube/instances/_ for Instance files  created by Veadotube Instances
-- Sends Events to a Listener when Files Are Created/Deleted/Expired/Modified
+- Monitors `<user folder>/.veadotube/instances/` for Instance files  created by Veadotube Instances
+- Sends Events to a Listener when Files Are Created, Modified, Deleted/Expired
   - Modified event only triggered if Instance Name Changes, internal file timestamps don't trigger modified event
 
 **InstanceID - Represents an imported Instance File**
 - Immutable - values can't be modified after creation
 - Contains the values of the File Name, not file contents
-  - File name is in format \<Instance Type\>-\<Launch Timestamp Hex\>-\<Process ID Hex\> e.g. *mini-08dc8d3c583c0587-00000f38*
+  - File name is in format `<Instance Type>-<Launch Timestamp Hex>-<Process ID Hex>` e.g. *mini-08dc8d3c583c0587-00000f38*
   - These are separated to:
     - type (e.g. mini)
     - timestamp (as Long)
@@ -93,11 +93,11 @@ The Touch Portal Veadotube Plugin source code is the best example of use
 **Instance - Represents the Server details of a single running copy of Veadotube**
 - When created by Instance Manager, it contains the *Contents* of the Instance File
 - Has the following values:
-  - id (InstanceID the instance was imported from)
-  - server (WebSocket Server IP & Port e.g. '127.0.0.1:23456')
-  - name (Instance Display Name e.g 'veadotube mini')
-  - fileLastModified (Internal Timestamp used to expire old files - mainly if Veadotube crashes and old Instance files are left behind)
-  - instanceConnectionID (Unique ID Generated from ID, Server, Name)
+  - id - InstanceID the instance was imported from
+  - server - WebSocket Server IP & Port. e.g. '127.0.0.1:23456'
+  - name - Instance Display Name. e.g. 'veadotube mini'
+  - fileLastModified - Internal Timestamp used to expire old files
+  - instanceConnectionID - Unique ID Generated from ID, Server, Name
 
 **Instances Listener**
 - Interface for receiving events from Instances Manager
