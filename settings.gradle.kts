@@ -1,21 +1,15 @@
 pluginManagement {
-    val versionKotlin: String by settings
-
-
-    plugins {
-        kotlin("jvm") version versionKotlin
-        kotlin("kapt") version versionKotlin
-        kotlin("plugin.serialization") version versionKotlin // Serialization Plugin should match Kotlin Version
-    }
 
     repositories {
         mavenLocal()
         mavenCentral()
         gradlePluginPortal()
     }
+
 }
+
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.5.0"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.8.0"
 }
 
 rootProject.name = "bleatkan"

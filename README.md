@@ -6,7 +6,7 @@ Originally Created alongside the Touch Portal Veadotube Plugin, referencing the 
 ---
 
 ## Releases
-The latest version is 0.5.0 and currently a beta release.  
+The latest version is 0.6.0 and currently a beta release.  
 
 
 - Very much a Work in Progress - stable enough for general use but hasn't been fully tested.
