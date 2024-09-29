@@ -187,7 +187,7 @@ class Connection : AutoCloseable {
      * Contains Logic for Message processing, Websocket Creation/Clean up, etc
      *
      * @param instance [Instance] this Connection will connect to
-     * @param receiver [ConnectionListener] to get callbacks
+     * @param listener [ConnectionListener] to get callbacks
      * @param connectionJobParent **Optional** [Job] that will be used in the Scope of the Websocket Receiver Loop.
      * A default Job and Supervisor is used of none is provided, allowing all Connections to be closed using [Connection.closeAll]
      *
@@ -198,7 +198,7 @@ class Connection : AutoCloseable {
     @Throws(IllegalArgumentException::class)
     constructor(
         instance: Instance,
-        receiver: ConnectionListener,
+        listener: ConnectionListener,
         connectionJobParent: Job = connectionDefaultJobParent
     ) {
         LOGGER.trace { "Constructing Connection" }
@@ -208,13 +208,13 @@ class Connection : AutoCloseable {
         this.server = instance.server
         this.name = instance.name
         this.instance = instance
-        connectionListener = receiver
+        connectionListener = listener
 
         //Get URI
         try {
             connUri = instance.getWebSocketUri()
         } catch (ex: IllegalArgumentException) {
-            receiver.onConnectionError(this, ConnectionError.InvalidServerOrName)
+            listener.onConnectionError(this, ConnectionError.InvalidServerOrName)
             throw ex
         }
 
@@ -261,7 +261,7 @@ class Connection : AutoCloseable {
      * Contains Logic for Message processing, Websocket Creation/Clean up, etc
      *
      * @param instance [Instance] this Connection will connect to
-     * @param receiver [ConnectionListener] to get callbacks
+     * @param listener [ConnectionListener] to get callbacks
      *
      * A default Job and Supervisor is used for CoRoutine lifecycle management, allowing all Connections to be closed using [Connection.closeAll]
      *
@@ -272,9 +272,9 @@ class Connection : AutoCloseable {
     @Throws(IllegalArgumentException::class)
     constructor(
         instance: Instance,
-        receiver: ConnectionListener
+        listener: ConnectionListener
     ) : this(
-        instance = instance, receiver = receiver,
+        instance = instance, listener = listener,
         connectionJobParent = connectionDefaultJobParent
     )
 
@@ -285,7 +285,7 @@ class Connection : AutoCloseable {
      * Contains Logic for Message processing, Websocket Creation/Clean up, etc
      *
      * @param instance [Instance] *Optional* A Default Dummy Instance is created and no connection is made, but a custom on could be made to test generated values, etc.
-     * @param receiver [ConnectionListener] to get callbacks
+     * @param listener [ConnectionListener] to get callbacks
      * @param testFrameChannel [ReceiveChannel] that can be sent Fake Frames for testing runWebsocketReceiver/
      * @param mockWebSocketSession Mocked [WebSocketSession] that should return isActive as True and intercept send(dataAsString) for send to work
      *
@@ -300,7 +300,7 @@ class Connection : AutoCloseable {
     @VisibleForUnitTests
     internal constructor(
         instance: Instance = Instance(InstanceID("mini", 12345678, 1234), "dummy", "127.0.0.10:12345"),
-        receiver: ConnectionListener,
+        listener: ConnectionListener,
         testFrameChannel: ReceiveChannel<Frame>,
         mockWebSocketSession: WebSocketSession
     ) {
@@ -311,13 +311,13 @@ class Connection : AutoCloseable {
         this.server = instance.server
         this.name = instance.name
         this.instance = instance
-        connectionListener = receiver
+        connectionListener = listener
 
         //Get URI
         try {
             connUri = instance.getWebSocketUri()
         } catch (ex: IllegalArgumentException) {
-            receiver.onConnectionError(this, ConnectionError.InvalidServerOrName)
+            listener.onConnectionError(this, ConnectionError.InvalidServerOrName)
             throw ex
         }
 
