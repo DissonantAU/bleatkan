@@ -19,13 +19,14 @@ import kotlin.io.path.name
 
 
 /**
- * Based on Instances.cs
+ * Checks Veadotube Instances Folder, Tracks Instances, and generates events for new/changed/closed Instances
  *
- * Based on [veadotube bleatcan (Commit b1d4f...)](https://gitlab.com/veadotube/bleatcan/-/tree/b1d4faf70138c1e839b449c3cf799b6fd59c837b/bleatcan)
+ *
+ * Originally based on Instances.cs in [veadotube bleatcan (Commit b1d4f...)](https://gitlab.com/veadotube/bleatcan/-/tree/b1d4faf70138c1e839b449c3cf799b6fd59c837b/bleatcan)
  */
 @Suppress("unused")
 class InstancesManager(
-    receiver: InstancesListener,
+    listener: InstancesListener,
     managerJobParent: Job? = null
 ) : AutoCloseable {
 
@@ -68,8 +69,8 @@ class InstancesManager(
     }
 
     constructor(
-        receiver: InstancesListener
-    ) : this(receiver = receiver, managerJobParent = null)
+        listener: InstancesListener
+    ) : this(listener = listener, managerJobParent = null)
 
     /**
      * Coroutine Job - contains all Jobs for InstancesManager
@@ -109,7 +110,7 @@ class InstancesManager(
     private val instancesMapMutex = Mutex()
 
     /** Event Listener that should receive Start/Change/End events */
-    private val instanceEventListener: InstancesListener = receiver
+    private val instanceEventListener: InstancesListener = listener
 
 
     /** Watcher is set to active when loop is enabled, and loop will run while it's true */

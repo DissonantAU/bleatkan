@@ -31,7 +31,7 @@ class TestListener : InstancesListener, ConnectionListener {
         //Create a connection
         val connection = Connection(
             instance = instance,
-            receiver = this,
+            listener = this,
         )
 
         connectionMap[instance] = connection

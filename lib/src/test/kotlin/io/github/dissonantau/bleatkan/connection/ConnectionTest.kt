@@ -393,8 +393,9 @@ class ConnectionTest {
 
                 conn = Connection(
                     instance = dummyInstance,
-                    receiver = connectionListener,
-                    testFrameChannel = frameReceive, mockWebSocketSession = mockWebSocketSession
+                    listener = connectionListener,
+                    testFrameChannel = frameReceive,
+                    mockWebSocketSession = mockWebSocketSession
                 )
             }
 
