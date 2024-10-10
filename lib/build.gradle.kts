@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 
     `java-library`
+    `maven-publish`
 }
 
 group = "io.github.dissonantau"
@@ -116,6 +117,25 @@ tasks.withType<Jar> {
         )
     }
 }
+
+
+
+publishing {
+    publications {
+        create<MavenPublication>("bleatkan") {
+            from(components["java"])
+            artifactId = rootProject.name
+        }
+    }
+
+    repositories {
+        maven {
+            name = "tempRepo"
+            url = uri(layout.buildDirectory.dir("repo"))
+        }
+    }
+}
+
 
 tasks.test {
     useJUnitPlatform()
