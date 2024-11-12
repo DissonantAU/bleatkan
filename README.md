@@ -83,13 +83,13 @@ The Touch Portal Veadotube Plugin source code is the best example of use
 
 #### Instance Package
 
-**Instances Manager**
+**_Instances Manager_**
 - Imports Instance Files and Manages Object Lifecycle
 - Monitors `<user folder>/.veadotube/instances/` for Instance files  created by Veadotube Instances
 - Sends Events to a Listener when Files Are Created, Modified, Deleted/Expired
   - Modified event only triggered if Instance Name Changes, internal file timestamps don't trigger modified event
 
-**InstanceID - Represents an imported Instance File**
+**_InstanceID_ - Represents an imported Instance File**
 - Immutable - values can't be modified after creation
 - Contains the values of the File Name, not file contents
   - File name is in format `<Instance Type>-<Launch Timestamp Hex>-<Process ID Hex>` e.g. *mini-08dc8d3c583c0587-00000f38*
@@ -98,7 +98,7 @@ The Touch Portal Veadotube Plugin source code is the best example of use
     - timestamp (as Long)
     - process (as Int)
 
-**Instance - Represents the Server details of a single running copy of Veadotube**
+**_Instance_ - Represents the Server details of a single running copy of Veadotube**
 - When created by Instance Manager, it contains the *Contents* of the Instance File
 - Has the following values:
   - id - InstanceID the instance was imported from
@@ -107,43 +107,44 @@ The Touch Portal Veadotube Plugin source code is the best example of use
   - fileLastModified - Internal Timestamp used to expire old files
   - instanceConnectionID - Unique ID Generated from ID, Server, Name
 
-**Instances Listener**
+**_Instances Listener_**
 - Interface for receiving events from Instances Manager
 
 
 #### Connection Package
 
-**Connection - A single Connection to a Veadotube Instance**
+**_Connection_ - A single Connection to a Veadotube Instance**
 - Connects to an Instance of Veadotube using WebSocket
 - Constructor needs an Instance and a Connection Listener
 - Connection Listener is sent events and processed messages
 - Messages mainly use the Serializable Package
-  - Messages can be created with VtFactor, & sent using the Connection Send Function
+  - Messages can be created with VtFactory, & sent using the Connection Send Function
 - Received messages are processed and sent to Listener
 
-**Connection Error**
+**_Connection_ Error**
 - Errors that can be sent to the Listener
 
-**Connection Listener**
+**_Connection_ Listener**
 - Listener for receiving events from Connection Manager
 
 
 #### Message Package
+These are objects to represent JSON messages in a way that doesn't require the JSON Serialization Library to be directly used
 
-**Request Message**
+**_Request Message_**
 - VtFactory can be used to Generate Messages to send.
   - Has lots of convenience functions to make generation easy
 - RequestMessage is the base Class for messages - different message types inherit this
 - Several Enums for known values (message types, etc.) 
 
-**Result Message**
+**_Result Message_**
 - ResultMessage is the base Class for messages - different message types inherit this
 - Several Enums for known values (message types, etc.)
 
-**VtInstance**
+**_VeadoInstanceFile_**
 - Contents of an Instance File
 
-**Serializers**
+**_Serializers_**
 - Serializer Objects for converting between Objects & JSON
 
 ---

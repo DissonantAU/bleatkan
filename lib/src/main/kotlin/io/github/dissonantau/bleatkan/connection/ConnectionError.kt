@@ -2,7 +2,7 @@ package io.github.dissonantau.bleatkan.connection
 
 
 enum class ConnectionError {
-    None,
+    Unknown,
     InvalidServerOrName,
     FailedToConnect,
     ExceededRetries

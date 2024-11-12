@@ -15,7 +15,7 @@ import kotlinx.serialization.*
  * @see ResultMessageWithEntryList
  * @see ResultMessageWithEntryList
  */
-@Serializable(ResultMessageSerializer::class)
+@Serializable(ResultMessageDeserializer::class)
 sealed class ResultMessage {
     //e.g. Current State, List of States, State Thumbnail
     abstract val event: String
@@ -46,6 +46,27 @@ sealed class ResultMessage {
     ) : ResultMessage()
 
     /**
+     * Result Message with Instance info similar to [io.github.dissonantau.bleatkan.message.VeadoInstanceFile]
+     *
+     * This was added to API in mini version 2.1
+     */
+    @Serializable
+    data class ResultMessageWithInstanceInfo(
+        override val event: String,
+        /** Instance ID
+         *
+         * Same as name of Instance File Name/[io.github.dissonantau.bleatkan.instance.InstanceID]
+         */
+        val id: String,
+        /** Instance Server address - *IP:Port* */
+        val server: String,
+        /** Instance name/title */
+        val name: String,
+        /** Instance Version - "2.1a" */
+        val version: String,
+        ) : ResultMessage()
+
+    /**
      * Channel message was received from
      *
      * Transient value not included in JSON, but is added after decoding for use if needed
@@ -69,7 +90,7 @@ sealed class ResultMessage {
  * @see ResultPayloadStateList
  * @see ResultPayloadPng
  */
-@Serializable(ResultPayloadSerializer::class)
+@Serializable(ResultPayloadDeserializer::class)
 sealed class ResultPayload {
     abstract val event: String
 
@@ -105,7 +126,16 @@ sealed class ResultPayload {
          *
          * @see pngAsBytes to get PNG as a decoded ByteArray
          */
-        val png: String
+        val png: String,
+        /**
+         * Hash for Thumbnail
+         *
+         * Added 2.1, can be used to identify changes to State Thumbnail (e.g. to clear cached thumbnails when a state is changed)
+         *
+         * Consistent during the lifetime of a single run, but not across restarts
+         *
+         */
+        val hash: String? = null,
     ) : ResultPayload() {
 
         override fun equals(other: Any?): Boolean {
@@ -114,6 +144,7 @@ sealed class ResultPayload {
 
             other as ResultPayloadPng
 
+            if (hash != other.hash) return false
             if (event != other.event) return false
             if (state != other.state) return false
             if (width != other.width) return false
@@ -129,6 +160,7 @@ sealed class ResultPayload {
             result = 31 * result + width
             result = 31 * result + height
             result = 31 * result + png.hashCode()
+            hash?.let { result = 31 * result + hash.hashCode() }
             return result
         }
 
@@ -147,8 +179,10 @@ sealed class ResultPayload {
 
 
         override fun toString(): String {
-            //
-            return "ResultPayloadPng(event='$event', state='$state', width=$width, height=$height, png={hash=${png.hashCode()}, count=${png.count()}})"
+            // If received hash (2.1+)
+            if (hash!=null) return "ResultPayloadPng(event='$event', state='$state', width=$width, height=$height, hash=$hash, png={hashCode:${png.hashCode()}, count=${png.count()}})"
+            // If not (2.0/a)
+            return "ResultPayloadPng(event='$event', state='$state', width=$width, height=$height, png={hashCode:${png.hashCode()}, count=${png.count()}})"
         }
     }
 }
@@ -156,8 +190,29 @@ sealed class ResultPayload {
 
 @Serializable
 data class State(
+    /**
+     * Unique ID of State
+     *
+     * - 2.0/2.0a: is a short Base64 Value, consistent across saves and rearranged items
+     * - 2.1 and later: Name is unique, and is used instead
+     */
     val id: String,
-    val name: String
+    /**
+     * Name of State
+     *
+     * - 2.0/2.0a: is NOT Unique, multiple States can share a name
+     * - 2.1 and later: Name is unique
+     */
+    val name: String,
+    /**
+     * Hash for Thumbnail
+     *
+     * Added 2.1, can be used to identify changes to State Thumbnail (e.g. to clear cached thumbnails when a state is changed)
+     *
+     * Consistent during the lifetime of a single run, but not across restarts
+     *
+     */
+    val thumbHash: String? = null
 )
 
 

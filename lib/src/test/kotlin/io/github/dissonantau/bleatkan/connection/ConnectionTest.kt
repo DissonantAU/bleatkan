@@ -16,7 +16,7 @@ import io.github.dissonantau.bleatkan.instance.Instance
 import io.github.dissonantau.bleatkan.instance.InstanceID
 import io.github.dissonantau.bleatkan.message.RequestMessage
 import io.github.dissonantau.bleatkan.message.ResultMessage
-import io.github.dissonantau.bleatkan.message.VtRequest
+import io.github.dissonantau.bleatkan.message.VeadoRequest
 import io.github.dissonantau.bleatkan.message.ResultPayload
 import kotlin.test.Test
 
@@ -31,12 +31,10 @@ class ConnectionTest {
 
             assert(conn.server == dummyInstance.server) { "Connection Server doesn't Match Dummy Instance Value" }
 
-            assert(conn.name == dummyInstance.name) { "Connection Name doesn't Match Dummy Instance Value" }
-
             assert(
                 conn.connUri == Instance.getWebSocketUri(
                     dummyInstance.server,
-                    dummyInstance.name
+                    "testConnectionName"
                 )
             ) { "Connection URI doesn't expected Instance" }
         }
@@ -330,7 +328,7 @@ class ConnectionTest {
                 //coEvery { mockWebSocketSession.send(content = capture(contentSlot)) } just runs
                 coEvery { mockWebSocketSession.send(frame = capture(frameSlot)) } just runs
 
-                val request = VtRequest.getEventList
+                val request = VeadoRequest.getEventList
                 val requestExpectedSend =
                     """nodes:{"event":"list"}""" //"""nodes:{"event":"payload","type":"stateEvents","id":"mini","payload":{"event":"list"}}"""
                 val dataAsString = "nodes:${Json.encodeToString(RequestMessage.serializer(), request)}"
@@ -395,7 +393,9 @@ class ConnectionTest {
                     instance = dummyInstance,
                     listener = connectionListener,
                     testFrameChannel = frameReceive,
-                    mockWebSocketSession = mockWebSocketSession
+                    mockWebSocketSession = mockWebSocketSession,
+                    connectionName = "testConnectionName"
+
                 )
             }
 
@@ -414,10 +414,11 @@ class testConnectionListener : ConnectionListener {
         // nulls field during return
         get() = field.apply { field = null }
 
-    override fun onConnectionError(connection: Connection, error: ConnectionError) {
-        println("onConnectionError: $connection ; $error")
+    override fun onConnectionError(connection: Connection, error: ConnectionError, exception: Exception?): Boolean {
+        println("onConnectionError: $connection ; $error ; ${exception?.message}")
 
         lastConnectionError = Pair(connection, error)
+        return false
     }
 
     var lastConnectionChange: Pair<Connection, Boolean>? = null
