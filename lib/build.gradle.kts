@@ -1,4 +1,6 @@
 import org.gradle.jvm.tasks.Jar
+import org.jetbrains.dokka.gradle.DokkaTask
+import java.net.URL
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.utils.addToStdlib.ifFalse
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
@@ -10,27 +12,19 @@ plugins {
 
     `java-library`
     `maven-publish`
-}
 
-group = "io.github.dissonantau"
+    alias(libs.plugins.dokka)
+}
 
 /* Version */
 val versionMajor: Int = 0
 val versionMinor: Int = 6
 val versionPatch: Int = 6 //Is padded with 0 to left if needed
 
-val isRelease = System.getenv("IS_RELEASE") == "YES"
-val versionSuffix: String = isRelease.ifFalse { "-DEV" }.orEmpty()
 
-// Version becomes 1203
-val versionCode: Int = versionMajor * 1000 + versionMinor * 100 + versionPatch
-extra["versionCode"] = versionCode
+group = "io.github.dissonantau"
 
-// Version becomes 1.2.03 (Or 1.2.03-DEV etc.)
-val versionName: String = "$versionMajor.$versionMinor.${versionPatch.toString().padStart(2, '0')}$versionSuffix"
-extra["versionName"] = versionName
-version = versionName
-
+val buildsDir = rootProject.layout.projectDirectory.dir("libBuilds")
 
 repositories {
     mavenCentral()
@@ -99,26 +93,209 @@ kotlin {
 }
 
 java {
-    withJavadocJar()
-    withSourcesJar()
+    //withJavadocJar()
+    //withSourcesJar()
 
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
-tasks.withType<Jar> {
-    archiveBaseName.set(rootProject.name)
-    manifest {
-        attributes(
-            mapOf(
-                "Implementation-Title" to rootProject.name,
-                "Implementation-Version" to project.version
-            )
+tasks {
+
+    register("calculateVersion") {
+
+        doFirst {
+            println("Is Release: ${(project.extra.has("IS_RELEASE") && project.extra["IS_RELEASE"] == true)}")
+
+            val isRelease =
+                System.getenv("IS_RELEASE") == "YES" ||
+                        (project.extra.has("IS_RELEASE") && project.extra["IS_RELEASE"] == true)
+            val versionSuffix: String = isRelease.ifFalse { "-DEV" }.orEmpty()
+
+            // Version becomes 1203
+            val versionCode: Int = versionMajor * 1000 + versionMinor * 100 + versionPatch
+            project.extra["versionCode"] = versionCode
+            println("Version Code: $versionCode")
+
+            // Version becomes 1.2.03 (Or 1.2.03-DEV etc.)
+            val versionName =
+                "$versionMajor.$versionMinor.${versionPatch.toString().padStart(2, '0')}$versionSuffix"
+            project.extra["versionName"] = versionName
+            project.version = versionName
+            println("Version Name: $versionName")
+        }
+
+    }
+
+
+    withType<Jar> {
+        dependsOn(
+            named("calculateVersion")
         )
+
+        archiveBaseName.set(rootProject.name)
+        manifest {
+            attributes(
+                mapOf(
+                    "Implementation-Title" to rootProject.name,
+                    "Implementation-Version" to project.version
+                )
+            )
+        }
+    }
+
+
+    register<Jar>("dokkaHtmlJar") {
+        group = "build"
+        dependsOn(dokkaHtml)
+        from(dokkaHtml.flatMap { it.outputDirectory })
+        archiveClassifier.set("html-docs")
+    }
+
+    register<Jar>("dokkaJavadocJar") {
+        group = "build"
+        dependsOn(dokkaJavadoc)
+        from(dokkaJavadoc.flatMap { it.outputDirectory })
+        archiveClassifier.set("javadoc")
+    }
+
+    // From https://github.com/Kotlin/dokka/blob/1.9.20/examples/gradle/dokka-gradle-example/build.gradle.kts
+    withType<DokkaTask>().configureEach {
+        dokkaSourceSets {
+            named("main") {
+                // used as project name in the header
+                moduleName.set("BleatKan")
+
+                // adds source links that lead to this repository, allowing readers
+                // to easily find source code for inspected declarations
+                sourceLink {
+                    localDirectory.set(
+                        project.layout.projectDirectory.dir("src/main/kotlin").asFile
+                    )
+                    remoteUrl.set(
+                        URL(
+                            "https://github.com/DissonantAU/bleatkan/tree/main/" +
+                                    "lib/src/main/kotlin"
+                        )
+                    )
+
+                    println("Local Source Link: ${localDirectory.get()}")
+                    println("Remote Source Link: ${remoteUrl.get()}")
+                }
+            }
+        }
+    }
+
+
+    register("setBuildDev") {
+        doFirst {
+            println("Set to Non-Release Build")
+            project.ext["IS_RELEASE"] = false
+        }
+    }
+
+    register("setBuildRelease") {
+        doFirst {
+            println("Set to Release Build")
+            project.ext["IS_RELEASE"] = true
+        }
+    }
+
+    /* Task to build the project, copy to libBuilds*/
+
+    register<Copy>("copyToLibBuilds") {
+        duplicatesStrategy = DuplicatesStrategy.WARN
+
+        doFirst {
+            println("Copy to '${buildsDir.dir("${rootProject.name}-${project.version}")}'")
+        }
+
+        mustRunAfter(
+            named("calculateVersion")
+        )
+        dependsOn(
+            build,
+            jar,
+            kotlinSourcesJar,
+            named<Jar>("dokkaJavadocJar"),
+            named<Jar>("dokkaHtmlJar"),
+        )
+        from(
+            jar,
+            kotlinSourcesJar,
+            named<Jar>("dokkaJavadocJar"),
+            named<Jar>("dokkaHtmlJar"),
+        )
+        into { buildsDir.dir("${rootProject.name}-${project.version}") }
+
+    }
+
+
+    register<Copy>("copyToLibBuildsHtml") {
+        duplicatesStrategy = DuplicatesStrategy.WARN
+
+        doFirst {
+            println("Copy to '${buildsDir.dir("${rootProject.name}-${project.version}").dir("docs").dir("html")}'")
+        }
+
+        mustRunAfter(named("calculateVersion"))
+        dependsOn(dokkaHtml)
+        from(dokkaHtml)
+        into { buildsDir.dir("${rootProject.name}-${project.version}").dir("docs").dir("html") }
+
+    }
+
+    register<Copy>("copyToLibBuildsJavadoc") {
+        duplicatesStrategy = DuplicatesStrategy.WARN
+
+        doFirst {
+            println("Copy to '${buildsDir.dir("${rootProject.name}-${project.version}").dir("docs").dir("javadoc")}'")
+        }
+
+        mustRunAfter(named("calculateVersion"))
+        dependsOn(dokkaJavadoc)
+        from(dokkaJavadoc)
+        into { buildsDir.dir("${rootProject.name}-${project.version}").dir("docs").dir("javadoc") }
+    }
+
+    register("buildCopyDevToLibBuilds") {
+        group = "build"
+
+        doFirst {
+            println("Set to Dev Build")
+            project.ext["IS_RELEASE"] = false
+        }
+
+        finalizedBy(
+            named("calculateVersion"),
+            named("copyToLibBuilds"),
+            named("copyToLibBuildsHtml"),
+            named("copyToLibBuildsJavadoc"),
+        )
+
+    }
+
+    register("buildCopyReleaseToLibBuilds") {
+        group = "build"
+
+        doFirst {
+            println("Set to Release Build")
+            project.ext["IS_RELEASE"] = true
+        }
+
+        finalizedBy(
+            named("calculateVersion"),
+            named("copyToLibBuilds"),
+            named("copyToLibBuildsHtml"),
+            named("copyToLibBuildsJavadoc"),
+        )
+
+    }
+
+    test {
+        useJUnitPlatform()
     }
 }
-
-
 
 publishing {
     publications {
@@ -134,9 +311,4 @@ publishing {
             url = uri(layout.buildDirectory.dir("repo"))
         }
     }
-}
-
-
-tasks.test {
-    useJUnitPlatform()
 }
