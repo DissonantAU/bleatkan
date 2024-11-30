@@ -1,0 +1,24 @@
+$dokka.format:javadoc-v1
+$dokka.linkExtension:html
+$dokka.location:io.github.dissonantau.bleatkan.message/MessageEvent.Companion///PointingToDeclaration/io/github/dissonantau/bleatkan/message/MessageEvent.Companion.html
+$dokka.location:io.github.dissonantau.bleatkan.message/MessagePayloadId.Companion///PointingToDeclaration/io/github/dissonantau/bleatkan/message/MessagePayloadId.Companion.html
+$dokka.location:io.github.dissonantau.bleatkan.message/MessagePayloadType.Companion///PointingToDeclaration/io/github/dissonantau/bleatkan/message/MessagePayloadType.Companion.html
+$dokka.location:io.github.dissonantau.bleatkan.message/PayloadEvent.Companion///PointingToDeclaration/io/github/dissonantau/bleatkan/message/PayloadEvent.Companion.html
+$dokka.location:io.github.dissonantau.bleatkan.message/RequestMessage.RequestMessageInstanceInfo///PointingToDeclaration/io/github/dissonantau/bleatkan/message/RequestMessage.RequestMessageInstanceInfo.html
+$dokka.location:io.github.dissonantau.bleatkan.message/RequestMessage.RequestMessageNodeEvent///PointingToDeclaration/io/github/dissonantau/bleatkan/message/RequestMessage.RequestMessageNodeEvent.html
+$dokka.location:io.github.dissonantau.bleatkan.message/RequestMessage.RequestMessageNodeList///PointingToDeclaration/io/github/dissonantau/bleatkan/message/RequestMessage.RequestMessageNodeList.html
+$dokka.location:io.github.dissonantau.bleatkan.message/RequestPayload.RequestPayloadEvent///PointingToDeclaration/io/github/dissonantau/bleatkan/message/RequestPayload.RequestPayloadEvent.html
+$dokka.location:io.github.dissonantau.bleatkan.message/RequestPayload.RequestPayloadEventState///PointingToDeclaration/io/github/dissonantau/bleatkan/message/RequestPayload.RequestPayloadEventState.html
+$dokka.location:io.github.dissonantau.bleatkan.message/RequestPayload.RequestPayloadEventToken///PointingToDeclaration/io/github/dissonantau/bleatkan/message/RequestPayload.RequestPayloadEventToken.html
+$dokka.location:io.github.dissonantau.bleatkan.message/ResultMessage.ResultMessageWithEntryList///PointingToDeclaration/io/github/dissonantau/bleatkan/message/ResultMessage.ResultMessageWithEntryList.html
+$dokka.location:io.github.dissonantau.bleatkan.message/ResultMessage.ResultMessageWithInstanceInfo///PointingToDeclaration/io/github/dissonantau/bleatkan/message/ResultMessage.ResultMessageWithInstanceInfo.html
+$dokka.location:io.github.dissonantau.bleatkan.message/ResultMessage.ResultMessageWithPayload///PointingToDeclaration/io/github/dissonantau/bleatkan/message/ResultMessage.ResultMessageWithPayload.html
+$dokka.location:io.github.dissonantau.bleatkan.message/ResultPayload.ResultPayloadPng///PointingToDeclaration/io/github/dissonantau/bleatkan/message/ResultPayload.ResultPayloadPng.html
+$dokka.location:io.github.dissonantau.bleatkan.message/ResultPayload.ResultPayloadState///PointingToDeclaration/io/github/dissonantau/bleatkan/message/ResultPayload.ResultPayloadState.html
+$dokka.location:io.github.dissonantau.bleatkan.message/ResultPayload.ResultPayloadStateList///PointingToDeclaration/io/github/dissonantau/bleatkan/message/ResultPayload.ResultPayloadStateList.html
+$dokka.location:io.github.dissonantau.bleatkan.message/VeadoRequest.FACTORY///PointingToDeclaration/io/github/dissonantau/bleatkan/message/VeadoRequest.FACTORY.html
+io.github.dissonantau.bleatkan
+io.github.dissonantau.bleatkan.connection
+io.github.dissonantau.bleatkan.instance
+io.github.dissonantau.bleatkan.message
+
