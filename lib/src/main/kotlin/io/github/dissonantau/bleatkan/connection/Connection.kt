@@ -1,5 +1,6 @@
 package io.github.dissonantau.bleatkan.connection
 
+import org.jetbrains.annotations.TestOnly
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
@@ -8,6 +9,7 @@ import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
 import java.net.ConnectException
+import java.net.*
 import java.net.URI
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -18,10 +20,9 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.coroutines.CoroutineContext
 import kotlinx.serialization.json.*
 
-
-import org.jetbrains.annotations.TestOnly
 
 import io.github.dissonantau.bleatkan.instance.Instance
 import io.github.dissonantau.bleatkan.instance.InstanceID
@@ -66,19 +67,18 @@ class Connection : AutoCloseable {
         private const val WS_CONN_ERROR_WAIT_MS: Long = 500
 
         /**
-         * JSON Deserializer
+         * Coroutine Supervisor Job - Parent of all jobs (if none provided on construction) and can be used to cancel all Connections
+         */
+        @JvmStatic
+        private val connectionDefaultJobParent by lazy { SupervisorJob() }
+
+        /**
+         * JSON De/serializer
          */
         private val jsonDeserializer = Json {
             ignoreUnknownKeys = true
             useAlternativeNames = false
         }
-
-
-        /**
-         * Coroutine Supervisor Job - Parent of all jobs (if none provided on construction) and can be used to cancel all Connections
-         */
-        @JvmStatic
-        private val connectionDefaultJobParent by lazy { SupervisorJob() }
 
         /**
          * Close all Connection Jobs tied to the default Connection Job Parent.
@@ -160,10 +160,24 @@ class Connection : AutoCloseable {
     private val wsReceiveDispatcher: CoroutineDispatcher
 
     /**
+     * Context for this Connection
+     */
+    private val websocketContext: CoroutineContext
+
+    /**
+     * Context & Job for this Connection
+     */
+    private val websocketJobContext: CoroutineContext
+
+    /**
      * Scope for this Connection, should be used to launch Jobs
      */
     private val websocketScope: CoroutineScope
 
+    /**
+     * Parallelism for Websocket Context
+     */
+    private val websocketParallelism = 3
 
     /**
      * Mutex for HttpClient Creation/Removal
@@ -182,6 +196,9 @@ class Connection : AutoCloseable {
 
     /** Deferred Close Reason for the Websocket to get Close Reason after Close */
     private var webSocketCloseReason: Deferred<CloseReason?>? = null
+
+    /** Exception from runWebsocketReceiver (If thrown) */
+    private var webSocketReceiverResult: Throwable? = null
 
 
     /* Start Client Vars
@@ -261,24 +278,26 @@ class Connection : AutoCloseable {
 
         activeLoop = true
 
-        connectionJob = Job(connectionJobParent)
+        /* Coroutine setup and Launch */
+        connectionJob = SupervisorJob(connectionJobParent)
 
         wsReceiveDispatcher =
             Dispatchers.IO.limitedParallelism(
-                1,
+                parallelism = websocketParallelism,
                 "connection-dsp-$server-${this.name.replace(' ', '~')}"
             )
 
-        websocketScope = CoroutineScope(
-            connectionJob + wsReceiveDispatcher + CoroutineName(
-                "connection-cr_$server-${this.name.replace(' ', '~')}"
-            )
+        websocketContext = wsReceiveDispatcher + CoroutineName(
+            "connection-cr_$server-${this.name.replace(' ', '~')}"
         )
 
+        websocketJobContext = connectionJob + websocketContext
+
+        websocketScope = CoroutineScope(websocketJobContext)
 
         LOGGER.trace { "Connection Constructor: Launch runWebsocketReceive() in $websocketScope" }
 
-        //Run in different scope, allowing constructor to exit
+        // Run in different scope, allowing constructor to exit
         websocketScope.launch {
             runWebsocketWatcher()
         }
@@ -374,23 +393,29 @@ class Connection : AutoCloseable {
 
         connectionTimeMillis = System.currentTimeMillis()
 
+
         //setupHttpClient() // Testing - Skipped
 
         activeLoop = true
 
-        connectionJob = Job(connectionDefaultJobParent)
+        /* Coroutine setup and Launch */
+        connectionJob = SupervisorJob(connectionDefaultJobParent)
+
 
         wsReceiveDispatcher =
             Dispatchers.IO.limitedParallelism(
-                1,
+                parallelism = websocketParallelism,
                 "connection-dsp-$server-${this.name.replace(' ', '~')}"
             )
 
-        websocketScope = CoroutineScope(
-            connectionJob + wsReceiveDispatcher + CoroutineName(
-                "connection-cr_$server-${this.name.replace(' ', '~')}"
-            )
+        websocketContext = wsReceiveDispatcher + CoroutineName(
+            "connection-cr_$server-${this.name.replace(' ', '~')}"
         )
+
+        websocketJobContext = connectionJob + websocketContext
+
+        websocketScope = CoroutineScope(websocketJobContext)
+
 
         // Testing - Mock Session
         webSocketSession = mockWebSocketSession
@@ -430,7 +455,7 @@ class Connection : AutoCloseable {
                         engine {
                             endpoint.connectTimeout = 6_000
                             endpoint.connectAttempts = 3
-                            endpoint.keepAliveTime = 12_000
+                            endpoint.keepAliveTime = 8_000
                             endpoint.socketTimeout = 12_000
                         }
                         install(Logging) {
@@ -462,12 +487,12 @@ class Connection : AutoCloseable {
 
                 //Client Setup
                 if (httpClient?.isActive == true) {
-                    LOGGER.trace { "shutdownHttpClient(): httpClient is active" }
+                    LOGGER.debug { "shutdownHttpClient(): httpClient is active" }
 
                     httpClient?.close()
                     httpClient = null
 
-                    LOGGER.trace { "shutdownHttpClient(): httpClient closed" }
+                    LOGGER.debug { "shutdownHttpClient(): httpClient closed" }
                 }
 
             }
@@ -498,14 +523,14 @@ class Connection : AutoCloseable {
             LOGGER.debug { "stopWebsocket: Already Closed" }
         }
 
-        LOGGER.trace { "stopWebsocket: Done" }
+        LOGGER.trace { "stopWebsocket: Complete" }
     }
 
 
     private suspend fun runWebsocketWatcher() {
         LOGGER.trace { "runWebsocketWatcher: Begin" }
 
-        var closeReason: CloseReason?
+        var closeReason: CloseReason? = null
         var errorCount = 0
 
         try {
@@ -513,23 +538,21 @@ class Connection : AutoCloseable {
             while (activeLoop && websocketScope.isActive) {
                 /* Start Websocket Loop Block */
 
-                closeReason = null
-
                 try {
 
                     try {
                         LOGGER.trace { "runWebsocketWatcher: Launch startWebsocket" }
                         startWebsocketSession()
-                    } catch (ex: CancellationException) {
-                        // CancellationException - Upstream Job is being closed, we should quit
-                        activeLoop = false
-                        LOGGER.trace { "runWebsocketWatcher: startWebsocket was cancelled" }
                     } finally {
                         //Make sure we get Close Reason
                         closeReason = webSocketCloseReason?.await()
                         LOGGER.trace { "runWebsocketWatcher: Websocket Close Reason = $closeReason" }
                     }
 
+                } catch (ex: CancellationException) {
+                    // CancellationException - Upstream Job is being closed, we should quit
+                    LOGGER.trace { "runWebsocketWatcher: startWebsocket was cancelled" }
+                    activeLoop = false
                 } catch (ex: Exception) {
                     var cancel: Boolean
 
@@ -561,7 +584,7 @@ class Connection : AutoCloseable {
 
                 } finally {
 
-                    if (activeLoop) {
+                    if (!activeLoop) {
                         //If loop not ended
                         when (closeReason?.knownReason) {
                             CloseReason.Codes.NORMAL, CloseReason.Codes.GOING_AWAY -> {
@@ -571,7 +594,7 @@ class Connection : AutoCloseable {
                             }
 
                             CloseReason.Codes.byCode(1006) -> {
-                                //Closed Abnormally - Happens when Veadotube Mini Closes - we don't seem to get a close frame, or KTOR Hides it and give us this
+                                // Closed Abnormally - Happens when Veadotube Mini Closes - we don't seem to get a close frame, or KTOR Hides it and give us this
                                 if (compatibilityFlagMiniPre2dot1) {
                                     LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube probably closed, but may have crashed" }
                                 } else {
@@ -617,7 +640,7 @@ class Connection : AutoCloseable {
         LOGGER.trace { "runWebsocketWatcher: Ended" }
     }
 
-    @Throws(IllegalStateException::class)
+
     private suspend fun startWebsocketSession() {
         LOGGER.trace { "startWebsocketSession: Connecting: $connUri (${connUri.host}, ${connUri.port}, ${connUri.rawPath}?${connUri.rawQuery})" }
         check(httpClient?.isActive == true) { "HttpClient is not active" }
@@ -626,6 +649,7 @@ class Connection : AutoCloseable {
         // Clear any Previous Session and Close Reason
         webSocketSession = null
         webSocketCloseReason = null
+        webSocketReceiverResult = null
 
         try {
             httpClient?.webSocket(
@@ -646,11 +670,26 @@ class Connection : AutoCloseable {
                 LOGGER.trace { "webSocket Session Block: Receiver Started" }
                 try {
                     runWebsocketReceiver(this.incoming)
-                } finally {
-                    LOGGER.trace { "webSocket Session Block: Receiver Closed" }
-                }
+                    LOGGER.trace { "webSocket Session Block: Disconnected" }
+                } catch (ex: Throwable) {
+                    webSocketReceiverResult = ex
+                    LOGGER.trace { "webSocket Session Block: Disconnected - Receiver Closed with Error" }
 
-            } ?: throw IllegalStateException("HttpClient is not active")
+                    if (ex !is Exception) {
+                        // Major Error - Throwable, not Exception
+                        LOGGER.warn { "webSocket Session Block -> WebsocketReceiver Throwable: ${ex.message} - ${ex.cause}\n${ex.stackTraceToString()}" }
+                        throw Exception("Major Error: Throwable ${ex.javaClass.simpleName}", ex)
+                    } else {
+                        //Regular Exception
+                        LOGGER.debug { "webSocket Session Block -> WebsocketReceiver Exception: ${ex.message} - ${ex.cause}\n${ex.stackTraceToString()}" }
+                        throw ex
+                    }
+                }
+            } ?: {
+                val ex = IllegalStateException("HttpClient is not active")
+                webSocketReceiverResult = ex
+                throw ex
+            }
 
         } finally {
             //Clear WS Session
@@ -661,64 +700,66 @@ class Connection : AutoCloseable {
     }
 
 
+    /**
+     * Receives Incoming Frames from Websocket [ReceiveChannel] as a flow, processes them,
+     * and sends them to the Registered Listener
+     *
+     *  Converts message to [ResultMessage] before calling Listener
+     */
     private suspend fun runWebsocketReceiver(incomingFrames: ReceiveChannel<Frame>) {
         LOGGER.trace { "runWebsocketReceiver: Begin" }
 
         /* Start Get and Process Message Block*/
         val connection: Connection = this
 
-        try {
-            incomingFrames.receiveAsFlow().buffer(10).cancellable()
-                .onStart {
-                    LOGGER.trace { "WebsocketReceiverFlow: Started Receiving Frames from $connUri" }
-                    isConnected = true
-                    connectionListener.onConnectionChange(connection, true)
-                    //updateClients(isConnected) // clientsMap not currently used
-                }
-                .onCompletion {
-                    LOGGER.trace { "WebsocketReceiverFlow: Stopped Receiving Frames from $connUri" }
-                    isConnected = false
-                    connectionListener.onConnectionChange(connection, false)
-                }
-                .transform { frame ->
-                    // Get Frame and emit message content If it should be processed
-                    when (frame) {
-                        is Frame.Text -> {
-                            // Should only receive Text/JSON from Veadotube, but processing is done using the ByteArray from the frame
-                            val messageBytes =
-                                frame.data //Get ByteArray instead of using readBytes, so we don't duplicate it the data
-                            LOGGER.trace { "WebsocketReceiverFlow: ${frame.frameType} Frame with ${frame.data.size} Bytes" }
-
-                            emit(messageBytes)
-                        }
-
-                        else -> {
-                            // Should never happen without Raw Socket
-                            LOGGER.debug { "WebsocketReceiverFlow: Received unexpected Frame - ${frame.frameType} Frame with ${frame.data.size} Bytes" }
-                        }
+        incomingFrames.receiveAsFlow().buffer(10).cancellable()
+            .onStart {
+                LOGGER.trace { "WebsocketReceiverFlow: Started Receiving Frames from $connUri" }
+                isConnected = true
+                connectionListener.onConnectionChange(connection, true)
+                //updateClients(isConnected) // clientsMap not currently used
+            }
+            .onCompletion {
+                LOGGER.trace { "WebsocketReceiverFlow: Stopped Receiving Frames from $connUri" }
+                isConnected = false
+                connectionListener.onConnectionChange(connection, false)
+            }
+            .transform { frame ->
+                LOGGER.trace { "WebsocketReceiverFlow: Received Frame - ${frame.hashCode()}" }
+                // Get Frame and emit message content If it should be processed
+                when (frame) {
+                    is Frame.Text -> {
+                        /* Should only receive Text/JSON from Veadotube, but processing is done using the ByteArray
+                        from the frame instead of using readBytes in case we process it before converting */
+                        val messageBytes = frame.data
+                        LOGGER.trace { "WebsocketReceiverFlow: ${frame.frameType} Frame with ${frame.data.size} Bytes" }
+                        emit(messageBytes)
                     }
-                }.buffer(5) // Buffer Messages to Process
-                .transform { messageBytes ->
-                    // Process message, emit if successful
-                    val processed = processReceivedMessage(messageBytes)
-                    if (processed != null) emit(processed)
-                }.buffer(5) // Buffer up to 5 Messages to Pass
-                .onEach { message ->
-                    // Pass along to Listeners, etc
-                    passReceivedToClients(message)
-                }
-                .collect()
-        } catch (ex: CancellationException) {
-            // CancellationException - Incoming Stream Was cancelled
-            LOGGER.trace { "runWebsocketReceiver: Websocket ReceiveChannel was cancelled" }
-            activeLoop = false
-        } catch (ex: Exception) {
-            // Other Exception - Just Log it
-            LOGGER.trace { "runWebsocketReceiver: Exception: ${ex.message} - ${ex.cause}\n${ex.stackTraceToString()}" }
-        }
-        /* End Get and Process Message Block*/
 
-        LOGGER.trace { "runWebsocketReceiver: Ended" }
+                    else -> {
+                        // Should never happen without Raw Socket
+                        LOGGER.debug { "WebsocketReceiverFlow: Received unexpected Frame - ${frame.frameType} Frame with ${frame.data.size} Bytes" }
+                    }
+                }
+            }.buffer(5) // Buffer up to X Messages to Process
+            .transform { messageBytes ->
+                LOGGER.trace { "WebsocketReceiverFlow: Parse ${messageBytes.hashCode()} to ApiMessage" }
+                // Process message, emit if successful
+                val processedMessage = processReceivedMessage(messageBytes)
+                if (processedMessage != null) {
+                    LOGGER.trace { "WebsocketReceiverFlow: Processed ${messageBytes.hashCode()} -> ApiMessage ${processedMessage.hashCode()}" }
+                    emit(processedMessage)
+                } else {
+                    LOGGER.debug { "WebsocketReceiverFlow: Processed ${messageBytes.hashCode()} -> Received Null - Error likely" }
+                }
+            }.buffer(5) // Buffer up to X Messages to Pass
+            //.flowOn(websocketContext)
+            .onEach { message ->
+                LOGGER.trace { "WebsocketReceiverFlow: Pass ApiMessage ${message.hashCode()} to Listener" }
+                // Pass along to Listeners, etc
+                passReceivedToListener(message)
+            }
+            .collect()
     }
 
 
@@ -727,7 +768,7 @@ class Connection : AutoCloseable {
      *
      * The [ResultMessage] contains a [ResultMessage.channel] with the detected channel name
      *
-     * Returns null if there's an error
+     * Returns null if there's an error/unsupported message
      */
     private fun processReceivedMessage(message: ByteArray): ResultMessage? {
         LOGGER.debug { "processReceivedMessage ${message.hashCode()}: ByteArray to Process: ${message.size} Bytes" }
@@ -773,7 +814,6 @@ class Connection : AutoCloseable {
                 message.size
             }
 
-
         // Extract JSON
         val textJsonExtracted = try {
             String(message, channelCharEnd + 1, textTrimIndex - (channelCharEnd + 1))
@@ -781,7 +821,6 @@ class Connection : AutoCloseable {
             LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error extracting JSON: ${ex.message}" }
             return null
         }
-
 
 
         LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Final Processed Message:\nChannel: $channel\nJSON: $textJsonExtracted" }
@@ -804,70 +843,94 @@ class Connection : AutoCloseable {
     }
 
 
+    /**
+     * Converts input to [ResultMessage]
+     *
+     * Also outputs object info to Logger if Logging is set to Trace
+     * It Covers all types, so it's a good example of all possible API Values
+     */
     private fun convertMessage(textCleaned: String): ResultMessage {
-        //Decode and Convert JSON to Object
+        // Decode and Convert JSON to Object
         LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: Attempting to decode JSON String to object:\n$textCleaned" }
-        val jsonVtMessage: ResultMessage =
+
+        val convertedMessage: ResultMessage =
             try {
                 jsonDeserializer.decodeFromString(textCleaned)
-            } catch (ex: Exception) {
-                LOGGER.warn { "convertMessage ${textCleaned.hashCode()}: Unable to decode JSON String to VtResultMessage: ${ex.message}\n$textCleaned" }
+            } catch (thrown: Throwable) {
+                val warningString = StringBuilder()
+
+                if (thrown !is Exception) {
+                    // Major Error - Throwable instead of Exception, could be something like NoClassDefFoundError or ExceptionInInitializerError
+                    warningString.append("Major Error deserializing JSON String to ApiMessage")
+                } else {
+                    // Regular Exception
+                    warningString.append("Failed to deserialize JSON String to ApiMessage")
+                }
+
+                LOGGER.debug { "convertMessage ${textCleaned.hashCode()}: Unable to decode JSON String to ApiMessage: ${thrown.message}\n$textCleaned" }
 
                 try {
                     //Try to convert to generic JSON Element - this isn't passed, but will let us know if it's valid JSON
                     val jsonMessage = Json.parseToJsonElement(textCleaned)
-                    LOGGER.warn { "convertMessage ${textCleaned.hashCode()}: Decoded Message JSON String to Generic JSON Element:\n$jsonMessage" }
+                    warningString.append("; Successfully decoded to Generic JSON Element")
+                    LOGGER.warn { "Warning - Failed to Deserialize JSON to Object: $jsonMessage" }
+
                 } catch (exInner: Exception) {
-                    LOGGER.warn { "convertMessage ${textCleaned.hashCode()}: Unable to decode JSON String to Generic JSON Element: ${exInner.message}\n$textCleaned" }
+                    warningString.append("; Failed decode to Generic JSON Element")
+                    LOGGER.warn { "Warning - Failed to Deserialize JSON. Error: '${exInner.message}' > JSON: '$textCleaned'" }
+                    //Add as Suppressed Exception
+                    thrown.addSuppressed(exInner)
                 }
 
-                throw ex
+                val exception = Exception(warningString.toString(), thrown)
+                throw exception
             }
 
 
         // If Decode failed, throw should have exited
         if (LOGGER.isTraceEnabled()) {
             // Trace is Enabled, process block to output info (Skip if not)
-            LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Event: " + jsonVtMessage.event }
-            if (jsonVtMessage is ResultMessage.ResultMessageWithEntryList) {
+            LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Event: " + convertedMessage.event }
+            if (convertedMessage is ResultMessage.ResultMessageWithEntryList) {
                 LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessageEntries" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries: ${jsonVtMessage.entries}" }
-                for (entry in jsonVtMessage.entries) {
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries: ${convertedMessage.entries}" }
+                for (entry in convertedMessage.entries) {
                     LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries -> Entry: $entry" }
                 }
-            } else if (jsonVtMessage is ResultMessage.ResultMessageWithPayload) {
+            } else if (convertedMessage is ResultMessage.ResultMessageWithPayload) {
                 LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessagePayload" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> ID: ${jsonVtMessage.id}" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Type: ${jsonVtMessage.type}" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Name: ${jsonVtMessage.name}" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> ID: ${convertedMessage.id}" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Type: ${convertedMessage.type}" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Name: ${convertedMessage.name}" }
 
-                if (jsonVtMessage.payload is ResultPayload.ResultPayloadStateList) {
-                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${jsonVtMessage.payload.event}" }
+                if (convertedMessage.payload is ResultPayload.ResultPayloadStateList) {
+                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${convertedMessage.payload.event}" }
 
-                    for (state in jsonVtMessage.payload.states) {
+                    for (state in convertedMessage.payload.states) {
                         LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> States -> State: $state" }
                     }
-                } else if (jsonVtMessage.payload is ResultPayload.ResultPayloadState) {
-                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${jsonVtMessage.payload.event}" }
-                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> State: ${jsonVtMessage.payload.state}" }
+                } else if (convertedMessage.payload is ResultPayload.ResultPayloadState) {
+                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${convertedMessage.payload.event}" }
+                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> State: ${convertedMessage.payload.state}" }
                 }
 
             } else {
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Unknown Message Class: ${jsonVtMessage.javaClass}" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Contents: $jsonVtMessage" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Unknown Message Class: ${convertedMessage.javaClass}" }
+                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Contents: $convertedMessage" }
             }
         }
 
-        LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: Decoded JSON String to:\n$jsonVtMessage" }
+        LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: Decoded JSON String to:\n$convertedMessage" }
 
-        return jsonVtMessage
+        return convertedMessage
     }
 
-    private fun passReceivedToClients(message: ResultMessage) {
+
+    private fun passReceivedToListener(message: ResultMessage) {
         try {
             connectionListener.onConnectionReceive(this, message)
         } catch (ex: Exception) {
-            LOGGER.warn { "passReceivedToClients: Exception passing Message to ConnectionReceiver: ${ex.message}" }
+            LOGGER.debug { "passReceivedToListener: Exception passing Message to ConnectionListener - ${ex.message}" }
         }
 
         // clientsMap Not currently Used
@@ -876,7 +939,7 @@ class Connection : AutoCloseable {
                 try {
                     client.emitReceive(message)
                 } catch (ex: Exception) {
-                    LOGGER.warn { "passReceivedToClients: Exception passing Message to client: ${ex.message}" }
+                    LOGGER.warn { "passReceivedToListener: Exception passing Message to client: ${ex.message}" }
                 }
             }
         }*/
@@ -892,6 +955,7 @@ class Connection : AutoCloseable {
         stopWebsocket()
     }
 
+
     @Synchronized
     override fun close() {
         if (!isClosed) {
@@ -906,7 +970,7 @@ class Connection : AutoCloseable {
 
             connectionJob.cancel()
 
-            LOGGER.trace { "Connection Closed" }
+            LOGGER.debug { "Connection Closed" }
         }
     }
 
@@ -917,10 +981,12 @@ class Connection : AutoCloseable {
      * @param channel *Optional* Veadotube Channel this should be sent to - defaults to "nodes"
      * @param requestData [RequestMessage] to send
      * @param validateRequest *Optional* whether the [RequestMessage] should be validated (using [RequestMessage.validate])
-     *
      */
+    @Suppress("unused")
+    @Throws(IllegalStateException::class)
     fun send(channel: String = "nodes", requestData: RequestMessage, validateRequest: Boolean = false) {
         check(!isClosed) { "Connection is Closed" }
+        check(activeLoop) { "Connection Websocket not active" }
         check(isConnected) { "Connection Websocket not connected" }
         require(channel.isNotBlank()) { "Channel cannot be blank" }
         check(webSocketSession?.isActive ?: false) { "Connection Websocket Session is not active" }
@@ -940,11 +1006,12 @@ class Connection : AutoCloseable {
      *
      * @param channel *Optional* Veadotube Channel this should be sent to - defaults to "nodes"
      * @param requestData JSON [String] to send
-     *
      */
     @Suppress("unused")
+    @Throws(IllegalStateException::class)
     fun send(channel: String = "nodes", requestData: String) {
         check(!isClosed) { "Connection is Closed" }
+        check(activeLoop) { "Connection Websocket not active" }
         check(isConnected) { "Connection Websocket not connected" }
         require(channel.isNotBlank()) { "Channel cannot be blank" }
         check(webSocketSession?.isActive ?: false) { "Connection Websocket Session is not active" }
@@ -956,6 +1023,7 @@ class Connection : AutoCloseable {
             webSocketSession?.send(Frame.Text(dataAsString))
         }
     }
+
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -970,12 +1038,14 @@ class Connection : AutoCloseable {
         return true
     }
 
+
     override fun hashCode(): Int {
         var result = connectionTimeMillis.hashCode()
         result = 31 * result + id.hashCode()
         result = 31 * result + instance.id.hashCode()
         return result
     }
+
 
     override fun toString(): String {
         return "Connection(instance=${instance.id}, id='$id', connectionTimeMillis=$connectionTimeMillis)"
