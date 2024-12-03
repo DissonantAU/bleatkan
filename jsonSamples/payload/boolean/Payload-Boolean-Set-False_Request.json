@@ -1,0 +1,10 @@
+//nodes:
+{
+  "event": "payload",
+  "type": "boolean",
+  "id": "mini",
+  "payload": {
+    "event": "set",
+    "value": false
+  }
+}
