@@ -1,10 +1,12 @@
 @file:Suppress("MemberVisibilityCanBePrivate", "unused")
+@file:OptIn(ExperimentalSerializationApi::class)
 
 package io.github.dissonantau.bleatkan.message
 
 
 import io.ktor.util.*
 import kotlinx.serialization.*
+import kotlinx.serialization.json.JsonClassDiscriminator
 
 
 /**
@@ -15,7 +17,8 @@ import kotlinx.serialization.*
  * @see ResultMessageWithEntryList
  * @see ResultMessageWithEntryList
  */
-@Serializable(ResultMessageDeserializer::class)
+@Serializable//(ResultMessageDeserializer::class)
+@JsonClassDiscriminator("event")
 sealed class ResultMessage {
     //e.g. Current State, List of States, State Thumbnail
     abstract val event: String
@@ -24,6 +27,7 @@ sealed class ResultMessage {
      * Result Message with a Payload
      */
     @Serializable
+    @SerialName("payload")
     data class ResultMessageWithPayload(
         override val event: String,
         /** Type - e.g. stateEvents */
@@ -40,6 +44,7 @@ sealed class ResultMessage {
      * Result Message with a List of Entries
      */
     @Serializable
+    @SerialName("list")
     data class ResultMessageWithEntryList(
         override val event: String,
         val entries: List<Entry>
@@ -51,6 +56,7 @@ sealed class ResultMessage {
      * This was added to API in mini version 2.1
      */
     @Serializable
+    @SerialName("info")
     data class ResultMessageWithInstanceInfo(
         override val event: String,
         /** Instance ID
@@ -90,12 +96,14 @@ sealed class ResultMessage {
  * @see ResultPayloadStateList
  * @see ResultPayloadPng
  */
-@Serializable(ResultPayloadDeserializer::class)
+@Serializable//(ResultPayloadDeserializer::class)
+@JsonClassDiscriminator("event")
 sealed class ResultPayload {
     abstract val event: String
 
     /** Payload with a List of States - e.g. List of Avatar States */
     @Serializable
+    @SerialName("list")
     data class ResultPayloadStateList(
         override val event: String,
         val states: List<State>
@@ -103,6 +111,7 @@ sealed class ResultPayload {
 
     /** Payload with a Single State - e.g. Current Avatar State */
     @Serializable
+    @SerialName("peek")
     data class ResultPayloadState(
         override val event: String,
         val state: String
@@ -110,6 +119,7 @@ sealed class ResultPayload {
 
     /** Payload with a State Thumbnail - e.g. Avatar State Thumbnail */
     @Serializable
+    @SerialName("thumb")
     data class ResultPayloadPng(
         override val event: String,
         val state: String,
