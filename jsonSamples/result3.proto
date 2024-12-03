@@ -1,0 +1,89 @@
+syntax = "proto3";
+
+package io.github.dissonantau.bleatkan.message;
+
+/* ResultMessage Polymorphic Objects */
+
+// serial name 'io.github.dissonantau.bleatkan.message.ResultMessage'
+message ResultMessage {
+    string type = 1;
+    // decoded as message with one of these types:
+    //   message ResultMessageWithEntryList, serial name 'ResultMessageWithEntryList'
+    //   message ResultMessageWithInstanceInfo, serial name 'ResultMessageWithInstanceInfo'
+    //   message ResultMessageWithPayload, serial name 'ResultMessageWithPayload'
+    bytes value = 2;
+}
+
+message ResultMessageWithEntryList {
+    string event = 1;
+    repeated Entry entries = 2;
+}
+
+message ResultMessageWithInstanceInfo {
+    string event = 1;
+    string id = 2;
+    string server = 3;
+    string name = 4;
+    string version = 5;
+}
+
+message ResultMessageWithPayload {
+    string event = 1;
+    string type = 2;
+    string id = 3;
+    string name = 4;
+    ResultPayload payload = 5;
+}
+
+
+/* ResultPayload Polymorphic Objects */
+
+// serial name 'io.github.dissonantau.bleatkan.message.ResultPayload'
+message ResultPayload {
+    string type = 1;
+    // decoded as message with one of these types:
+    //   message ResultPayloadPng, serial name 'ResultPayloadPng'
+    //   message ResultPayloadState, serial name 'ResultPayloadState'
+    //   message ResultPayloadStateList, serial name 'ResultPayloadStateList'
+    bytes value = 2;
+}
+
+message ResultPayloadPng {
+    string event = 1;
+    string state = 2;
+    int32 width = 3;
+    int32 height = 4;
+    // Sent as Base64 String - optionally could be bytes
+    string png = 5;
+    // Mini: only sent from 2.1
+    optional string hash = 6;
+}
+
+message ResultPayloadState {
+    string event = 1;
+    string state = 2;
+}
+
+message ResultPayloadStateList {
+    string event = 1;
+    State states = 2;
+}
+
+
+/* Other Objects */
+
+// serial name 'io.github.dissonantau.bleatkan.message.State'
+message State {
+    string id = 1;
+    string name = 2;
+    // Mini: only sent from 2.1
+    optional string thumb_hash = 3;
+}
+
+// serial name 'io.github.dissonantau.bleatkan.message.Entry'
+message Entry {
+    string type = 1;
+    string id = 2;
+    // Mini: id == name from 2.1
+    string name = 3;
+}

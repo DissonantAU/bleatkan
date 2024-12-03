@@ -1,0 +1,199 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "definitions": {
+    "PayloadStateEventsThumb": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/definitions/PayloadStateEventsThumbPayload"
+        }
+      },
+      "required": [],
+      "title": "PayloadStateEventsThumb"
+    },
+    "PayloadStateEventsThumbPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "width": {
+          "type": "integer"
+        },
+        "height": {
+          "type": "integer"
+        },
+        "png": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "title": "PayloadStateEventsThumbPayload"
+    },
+    "PayloadStateEventsPeek": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/definitions/PayloadStateEventsPeekPayload"
+        }
+      },
+      "required": [],
+      "title": "PayloadStateEventsPeek"
+    },
+    "PayloadStateEventsPeekPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "title": "PayloadStateEventsPeekPayload"
+    },
+    "PayloadStateEventsList": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "payload": {
+          "$ref": "#/definitions/PayloadStateEventsListPayload"
+        }
+      },
+      "required": [],
+      "title": "PayloadStateEventsList"
+    },
+    "PayloadStateEventsListPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "type": "string"
+        },
+        "states": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/State"
+          }
+        }
+      },
+      "required": [],
+      "title": "PayloadStateEventsListPayload"
+    },
+    "State": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "title": "State"
+    },
+    "ListNodesResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Entry"
+          }
+        }
+      },
+      "required": [],
+      "title": "ListNodesResult"
+    },
+    "Entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "title": "Entry"
+    },
+    "InstanceInfoResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "server": {
+          "type": "string"
+        },
+        "event": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "title": "InstanceInfoResult"
+    }
+  }
+}
