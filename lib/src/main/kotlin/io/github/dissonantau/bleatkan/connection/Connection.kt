@@ -7,6 +7,8 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -378,7 +380,7 @@ class Connection : AutoCloseable {
 
                     httpClient = HttpClient(CIO) {
                         install(WebSockets) {
-                            pingInterval = 4_000
+                            pingInterval = 4_000.toDuration(DurationUnit.MILLISECONDS)
                         }
                         engine {
                             endpoint.connectTimeout = 6_000
