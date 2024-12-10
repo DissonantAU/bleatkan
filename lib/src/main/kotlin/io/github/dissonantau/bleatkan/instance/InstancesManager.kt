@@ -9,7 +9,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 import io.github.dissonantau.bleatkan.MiscFunctions.getUnixTime
-import io.github.dissonantau.bleatkan.message.VtInstance
+import io.github.dissonantau.bleatkan.message.VeadoInstanceFile
 import java.io.FileReader
 import java.io.IOException
 import java.nio.file.*
@@ -45,6 +45,15 @@ class InstancesManager(
 
         /** Minimum time to sleep between loops (milliseconds)*/
         const val READ_LOOP_DELAY_MIN_MS: Long = 100
+
+        /**
+         * JSON Deserializer
+         */
+        private val jsonDeserializer = Json {
+            // Allows JSON with extra values to be processed instead of failing with an exception
+            ignoreUnknownKeys = true
+            useAlternativeNames = false
+        }
 
         /* static vals to be initialised */
         /** Directory - Veadotube Instances (at <user profile/home>\.veadotube\instances\) */
@@ -158,17 +167,17 @@ class InstancesManager(
 
                 if (contents.isNotBlank() && contents.length > 2) {
 
-                    val vtInstance = Json.decodeFromString<VtInstance>(contents)
+                    val veadoInstanceFile = jsonDeserializer.decodeFromString<VeadoInstanceFile>(contents)
 
                     //Check - make sure values are filled before proceeding
-                    check(vtInstance.time > 0) { "vtInstance missing timestamp" }
-                    check(vtInstance.time >= getUnixTime() - READ_TIMEOUT_SEC) { "vtInstance read timeout expired" }
+                    check(veadoInstanceFile.time > 0) { "vtInstance missing timestamp" }
+                    check(veadoInstanceFile.time >= getUnixTime() - READ_TIMEOUT_SEC) { "vtInstance read timeout expired" }
 
-                    check(vtInstance.name.isNotBlank()) { "vtInstance missing name" }
+                    check(veadoInstanceFile.name.isNotBlank()) { "vtInstance missing name" }
                     // Length check to handle bug in mine 2.0a where server can be ":0" when ws server from on to off
-                    check(vtInstance.server.isNotBlank() && vtInstance.server.length > 3) { "vtInstance missing server" }
+                    check(veadoInstanceFile.server.isNotBlank() && veadoInstanceFile.server.length > 3) { "vtInstance missing server" }
 
-                    LOGGER.trace { "processInstanceFile: $eventFilename Json - $vtInstance" }
+                    LOGGER.trace { "processInstanceFile: $eventFilename Json - $veadoInstanceFile" }
 
                     //Get Instance ID Object from Map, or Create if new
                     val instanceID = instancesIDMap.getOrPut(eventFilename) { InstanceID(eventFilename) }
@@ -183,36 +192,60 @@ class InstancesManager(
                         var newInstance = false
                         val existingInstance: Instance =
                             instancesMap.getOrPut(instanceID) {
-                                Instance(instanceID, vtInstance.name, vtInstance.server).also {
+                                Instance(
+                                    id = instanceID, title = veadoInstanceFile.name, server = veadoInstanceFile.server,
+                                    version = veadoInstanceFile.version
+                                ).also {
                                     newInstance = true
                                 }
                             }
 
-                        existingInstance.fileLastModified = vtInstance.time
+                        existingInstance.fileLastModified = veadoInstanceFile.time
 
                         //Check/Update values
                         if (!newInstance) {
                             //Existing instance - compare and update
+                            //Important Value Changed, this should trigger a change event
                             LOGGER.trace { "processInstanceFile: $eventFilename existing instance - $existingInstance" }
-                            if (existingInstance.name != vtInstance.name || existingInstance.server != vtInstance.server) {
 
-                                //Important Value Changed, this should trigger a change event
-                                if (existingInstance.name != vtInstance.name) {
-                                    LOGGER.trace { "processInstanceFile: name change ${existingInstance.name} -> ${vtInstance.name} " }
+                            when {
+                                existingInstance.server != veadoInstanceFile.server -> {
+                                    // This change would kill an existing connection and should involve a new Instance being created
+                                    LOGGER.trace { "processInstanceFile: server change ${existingInstance.server} -> ${veadoInstanceFile.server} " }
+
+                                    val newInstanceObj =
+                                        Instance(
+                                            id = instanceID,
+                                            name = veadoInstanceFile.name,
+                                            server = veadoInstanceFile.server,
+                                            version = veadoInstanceFile.version,
+                                            lastModified = veadoInstanceFile.time
+                                        )
+                                    instancesMap[instanceID] = newInstanceObj
+
+                                    LOGGER.debug { "processInstanceFile: Existing instance replaced - $existingInstance > $newInstanceObj" }
+
+                                    instanceEventListener.onInstanceChangeMajor(newInstanceObj, existingInstance)
                                 }
 
-                                if (existingInstance.server != vtInstance.server) {
-                                    LOGGER.trace { "processInstanceFile: server change ${existingInstance.server} -> ${vtInstance.server} " }
+                                existingInstance.title != veadoInstanceFile.name -> {
+                                    // Name is semi-important, mostly for matching title. Change would not kill an existing connection
+                                    LOGGER.trace { "processInstanceFile: name change ${existingInstance.title} -> ${veadoInstanceFile.name} " }
+
+                                    LOGGER.debug { "processInstanceFile: Existing instance updated - $existingInstance" }
+
+                                    val oldName = existingInstance.title
+                                    existingInstance.title = veadoInstanceFile.name
+
+                                    instanceEventListener.onInstanceChangeMinor(
+                                        instance = existingInstance,
+                                        change = InstanceChange.NAME,
+                                        oldValue = oldName
+                                    )
                                 }
-
-                                val newInstanceObj =
-                                    Instance(instanceID, vtInstance.name, vtInstance.server, vtInstance.time)
-                                instancesMap[instanceID] = newInstanceObj
-
-                                LOGGER.debug { "processInstanceFile: Existing instance updated - $existingInstance" }
-
-                                instanceEventListener.onInstanceChange(newInstanceObj, existingInstance)
                             }
+
+
                         } else {
                             LOGGER.debug { "processInstanceFile: New instance added - $existingInstance" }
                             instanceEventListener.onInstanceStart(existingInstance)
@@ -225,7 +258,7 @@ class InstancesManager(
                 /* Sometimes happens when the file happens to be read when it's still being written */
                 LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - $ex" }
             } catch (ex: IllegalArgumentException) {
-                // Not valid instance of VtInstance - could be a newer/non-mini version of Veadotube
+                // Not valid instance of VeadoInstanceFile - could be a newer/non-mini version of Veadotube
                 LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - $ex" }
             } catch (ex: IllegalStateException) {
                 // Missing vtInstance value, etc.
