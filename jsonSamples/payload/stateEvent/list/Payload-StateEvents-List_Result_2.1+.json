@@ -1,0 +1,33 @@
+//This example is from the default O Gato Avatar by BELLA!
+//nodes:
+{
+  "event": "payload",
+  "type": "stateEvents",
+  "id": "mini",
+  "name": "avatar state",
+  "payload": {
+    "event": "list",
+    "states": [
+      {
+        "id": "#1",
+        "name": "#1"
+      },
+      {
+        "id": "#2",
+        "name": "#2"
+      },
+      {
+        "id": "#3",
+        "name": "#3"
+      },
+      {
+        "id": "#4",
+        "name": "#4"
+      },
+      {
+        "id": "#5",
+        "name": "#5"
+      }
+    ]
+  }
+}

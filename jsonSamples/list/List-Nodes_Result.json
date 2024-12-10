@@ -1,0 +1,11 @@
+//nodes:
+{
+  "event": "list",
+  "entries": [
+    {
+      "type": "stateEvents",
+      "id": "mini",
+      "name": "avatar state"
+    }
+  ]
+}
