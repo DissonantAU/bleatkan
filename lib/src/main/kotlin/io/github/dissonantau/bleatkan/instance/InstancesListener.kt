@@ -11,13 +11,20 @@ interface InstancesListener {
     /**
      * Instance Manager Event - Existing Instance Updated
      *
-     * Usually a Name or Server IP change, requiring reconnection
+     * A Major change like a Server IP/Port changing which requires reconnection
      */
-    fun onInstanceChange(instance: Instance, oldInstance: Instance)
+    fun onInstanceChangeMajor(instance: Instance, oldInstance: Instance)
 
+    /**
+     * Instance Manager Event - Existing Instance Updated
+     *
+     * A Minor change like a Window Title changing, not requiring reconnection
+     */
+    fun onInstanceChangeMinor(instance: Instance, change: InstanceChange, oldValue: String)
 
     /**
      * Instance Manager Event - Existing Instance Closed
      */
     fun onInstanceEnd(id: InstanceID)
 }
+

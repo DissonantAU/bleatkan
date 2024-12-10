@@ -4,53 +4,55 @@ package io.github.dissonantau.bleatkan.message
 
 
 import kotlinx.serialization.*
-import kotlinx.serialization.json.JsonContentPolymorphicSerializer
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.*
 
 
-/* Request Message */
+/* Request Message Deserializers */
 
-object RequestMessageSerializer : JsonContentPolymorphicSerializer<RequestMessage>(RequestMessage::class) {
+object RequestMessageDeserializer : JsonContentPolymorphicSerializer<RequestMessage>(RequestMessage::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<RequestMessage> {
         val jsonObject = element.jsonObject
         return when {
             jsonObject["event"]?.equals("list") ?: false -> RequestMessage.RequestMessageNodeList.serializer()
             jsonObject.containsKey("payload") -> RequestMessage.RequestMessageNodeEvent.serializer()
+
             else -> throw IllegalArgumentException("Unsupported request type")
         }
     }
 }
 
 
-object RequestPayloadSerializer : JsonContentPolymorphicSerializer<RequestPayload>(RequestPayload::class) {
+object RequestPayloadDeserializer : JsonContentPolymorphicSerializer<RequestPayload>(RequestPayload::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<RequestPayload> {
         val jsonObject = element.jsonObject
         return when {
             jsonObject.containsKey("token") -> RequestPayload.RequestPayloadEventToken.serializer()
             jsonObject.containsKey("state") -> RequestPayload.RequestPayloadEventState.serializer()
             jsonObject.containsKey("event") -> RequestPayload.RequestPayloadEvent.serializer()
+
             else -> throw IllegalArgumentException("Unsupported Payload type")
         }
     }
 }
 
 
-/* Result Message */
+/* Result Message Deserializers */
 
-object ResultMessageSerializer : JsonContentPolymorphicSerializer<ResultMessage>(ResultMessage::class) {
+object ResultMessageDeserializer : JsonContentPolymorphicSerializer<ResultMessage>(ResultMessage::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<ResultMessage> {
         val jsonObject = element.jsonObject
         return when {
             jsonObject.containsKey("payload") -> ResultMessage.ResultMessageWithPayload.serializer()
             jsonObject.containsKey("entries") -> ResultMessage.ResultMessageWithEntryList.serializer()
+            jsonObject["event"]?.jsonPrimitive?.content == "info" -> ResultMessage.ResultMessageWithInstanceInfo.serializer()
+
             else -> throw IllegalArgumentException("Unsupported Payload type")
         }
     }
 }
 
 
-object ResultPayloadSerializer : JsonContentPolymorphicSerializer<ResultPayload>(ResultPayload::class) {
+object ResultPayloadDeserializer : JsonContentPolymorphicSerializer<ResultPayload>(ResultPayload::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<ResultPayload> {
         val jsonObject = element.jsonObject
         return when {
