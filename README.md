@@ -10,7 +10,7 @@ The latest version is 0.6.0 and currently a beta release.
 
 
 - Very much a Work in Progress - stable enough for general use but hasn't been fully tested.
-- Only Tested with Veadotube Mini v2.0
+- Tested with Veadotube Mini v2.0a & v2.1 Beta
 - Future Releases and the release of Veadotube (e.g. Full) will likely require updates, if not breaking changes.
 - The Major Version will be bumped for any breaking changes
 
@@ -33,6 +33,14 @@ The latest version is 0.6.0 and currently a beta release.
 - Kotlinx JSON Serialization Library for Serializing and Deserializing WebSocket Messages
 - Log4J, SLF4J, and Kotlin Logging
 - JUnit for Testing
+
+
+## License
+- The BleatKan Library is Licensed under Apache 2.0
+- Please note: Some JSON Samples contain sample that cannot be forward licensed by this project
+  - *Thumbnail Result Payload* Sample png field(s) contain the image data of default Veadotube Avatars
+  - Copyright, etc. are retained by the creators of Veadotube and the Avatars
+  - These Samples are not required to build or run the software and are only provided to assist with developing and understanding the library
 
 ---
 
