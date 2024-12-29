@@ -59,12 +59,12 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     runtimeOnly(libs.kotlinx.coroutines.slf4j)
 
-    // Websocket (and HTTP) Framework
+    // HTTP/Websocket Framework
     implementation(platform(libs.ktor.client.bom))
     implementation(libs.ktor.client.core)
     implementation(libs.ktor.client.websockets)
     implementation(libs.ktor.client.logging)
-    // HTTP Engines - pick one
+    // HTTP Engine
     implementation(libs.ktor.client.cio) // No HTTP/2 Support, fine for Veadotube Websockets
     // JSON - probably best to use Probably KotlinX for JSON
     implementation(libs.ktor.serialization.json)
@@ -289,7 +289,23 @@ tasks {
 
     /* Meta Build Jobs */
 
-    register("buildCopySnapshotToLibBuilds") {
+    register("buildCopySnapshotToLibBuildsJarDocs") {
+        group = "build"
+
+        doFirst {
+            println("Building ${rootProject.name} as Snapshot Build")
+            project.ext["BUILD_TYPE"] = "SNAPSHOT"
+        }
+
+        finalizedBy(
+            named("calculateLibraryVersion"),
+            named("copyToLibBuilds"),
+            named("copyToLibBuildsHtml"),
+            named("copyToLibBuildsJavadoc"),
+        )
+    }
+
+    register("buildCopySnapshotToLibBuildsOnlyJar") {
         group = "build"
 
         doFirst {
@@ -305,7 +321,23 @@ tasks {
         )
     }
 
-    register("buildCopyDevToLibBuilds") {
+    register("buildCopySnapshotToLibBuildsOnlyDocs") {
+        group = "build"
+
+        doFirst {
+            println("Building ${rootProject.name} as Snapshot Build")
+            project.ext["BUILD_TYPE"] = "SNAPSHOT"
+        }
+
+        finalizedBy(
+            //named("calculateLibraryVersion"),
+            //named("copyToLibBuilds"),
+            named("copyToLibBuildsHtml"),
+            named("copyToLibBuildsJavadoc"),
+        )
+    }
+
+    register("buildCopyDevToLibBuildsJarDocs") {
         group = "build"
 
         doFirst {
@@ -321,7 +353,39 @@ tasks {
         )
     }
 
-    register("buildCopyReleaseToLibBuilds") {
+    register("buildCopyDevToLibBuildsOnlyJar") {
+        group = "build"
+
+        doFirst {
+            println("Building ${rootProject.name} as Dev Build")
+            project.ext["BUILD_TYPE"] = "DEV"
+        }
+
+        finalizedBy(
+            named("calculateLibraryVersion"),
+            named("copyToLibBuilds"),
+            //named("copyToLibBuildsHtml"),
+            //named("copyToLibBuildsJavadoc"),
+        )
+    }
+
+    register("buildCopyDevToLibBuildsOnlyDocs") {
+        group = "build"
+
+        doFirst {
+            println("Building ${rootProject.name} as Dev Build")
+            project.ext["BUILD_TYPE"] = "DEV"
+        }
+
+        finalizedBy(
+            //named("calculateLibraryVersion"),
+            //named("copyToLibBuilds"),
+            named("copyToLibBuildsHtml"),
+            named("copyToLibBuildsJavadoc"),
+        )
+    }
+
+    register("buildCopyReleaseToLibBuildsJarDocs") {
         group = "build"
 
         doFirst {
@@ -332,6 +396,38 @@ tasks {
         finalizedBy(
             named("calculateLibraryVersion"),
             named("copyToLibBuilds"),
+            named("copyToLibBuildsHtml"),
+            named("copyToLibBuildsJavadoc"),
+        )
+    }
+
+    register("buildCopyReleaseToLibBuildsOnlyJar") {
+        group = "build"
+
+        doFirst {
+            println("Building ${rootProject.name} as Release Build")
+            project.ext["BUILD_TYPE"] = "RELEASE"
+        }
+
+        finalizedBy(
+            named("calculateLibraryVersion"),
+            named("copyToLibBuilds"),
+            //named("copyToLibBuildsHtml"),
+            //named("copyToLibBuildsJavadoc"),
+        )
+    }
+
+    register("buildCopyReleaseToLibBuildsOnlyDocs") {
+        group = "build"
+
+        doFirst {
+            println("Building ${rootProject.name} as Release Build")
+            project.ext["BUILD_TYPE"] = "RELEASE"
+        }
+
+        finalizedBy(
+            //named("calculateLibraryVersion"),
+            //named("copyToLibBuilds"),
             named("copyToLibBuildsHtml"),
             named("copyToLibBuildsJavadoc"),
         )
