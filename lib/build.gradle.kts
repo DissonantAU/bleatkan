@@ -1,6 +1,4 @@
 import org.gradle.jvm.tasks.Jar
-import org.jetbrains.dokka.gradle.DokkaTask
-import java.net.URL
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 
@@ -13,12 +11,13 @@ plugins {
     `maven-publish`
 
     alias(libs.plugins.dokka)
+    alias(libs.plugins.dokka.javadoc)
 }
 
 /* Version */
 val versionMajor: Int = 0
 val versionMinor: Int = 7
-val versionPatch: Int = 0 //Is padded with 0 to left if needed
+val versionPatch: Int = 0
 
 
 group = "io.github.dissonantau"
@@ -31,14 +30,10 @@ println("Bleatkan LibBuilds Dir: $buildsDir")
 project.extra["releaseName"] = rootProject.name
 println("Release project: ${project.extra["releaseName"]}")
 
-// Version becomes 1203
-val versionCode: Int = versionMajor * 1000 + versionMinor * 100 + versionPatch
-project.extra["versionCode"] = versionCode
-println("Version Code: $versionCode")
 
 // Version Base Name becomes 1.2.03
 val versionName =
-    "$versionMajor.$versionMinor.${versionPatch.toString().padStart(2, '0')}"
+    "$versionMajor.$versionMinor.$versionPatch"
 project.extra["versionBaseName"] = versionName
 
 calcVersion()
@@ -115,6 +110,7 @@ java {
     targetCompatibility = JavaVersion.VERSION_1_8
 }
 
+
 tasks {
 
     // Calculate Version/Build names, etc.
@@ -124,28 +120,6 @@ tasks {
         }
     }
 
-    // Run Version Calculation during Build, including IDE Import/refresh
-    // Mainly targeting prepareKotlinBuildScriptModel
-    //try {
-    //    rootProject.tasks.named("prepareKotlinBuildScriptModel") {
-    //        println("Add calculateLibraryVersion to dependsOn $name > Class ${javaClass.name}")
-    //        dependsOn(
-    //            named("calculateLibraryVersion")
-    //        )
-    //    }
-    //} catch (_: Throwable) {
-    //    // Add if prepareKotlinBuildScriptModel not found
-    //    println("prepareKotlinBuildScriptModel Not Found - Falling Back to Add to all")
-    //
-    //    rootProject.tasks.forEach {
-    //        if (it.name != "calculateLibraryVersion") {
-    //            println("Add calculateLibraryVersion to dependsOn $name > Class ${javaClass.name}")
-    //            it.dependsOn(
-    //                named("calculateLibraryVersion")
-    //            )
-    //        }
-    //    }
-    //}
 
     /* Jar Tasks - Modify to generate version names and set archive properties */
 
@@ -170,46 +144,18 @@ tasks {
 
     /* Doc Generation */
 
-    register<Jar>("dokkaHtmlJar") {
-        group = "build"
+    register<Jar>("dokkaGenerateHtmlJar") {
+        group = "documentation"
         archiveClassifier.set("html-docs")
-        dependsOn(dokkaHtml)
-        from(dokkaHtml.flatMap { it.outputDirectory })
+        dependsOn(dokkaGeneratePublicationHtml)
+        from(dokkaGeneratePublicationHtml.flatMap { it.outputDirectory })
     }
 
-    register<Jar>("dokkaJavadocJar") {
-        group = "build"
+    register<Jar>("dokkaGenerateJavadocJar") {
+        group = "documentation"
         archiveClassifier.set("javadoc")
-        dependsOn(dokkaJavadoc)
-        from(dokkaJavadoc.flatMap { it.outputDirectory })
-    }
-
-
-    // From https://github.com/Kotlin/dokka/blob/1.9.20/examples/gradle/dokka-gradle-example/build.gradle.kts
-    withType<DokkaTask>().configureEach {
-        dokkaSourceSets {
-            named("main") {
-                // used as project name in the header
-                moduleName.set("BleatKan")
-
-                // adds source links that lead to this repository, allowing readers
-                // to easily find source code for inspected declarations
-                sourceLink {
-                    localDirectory.set(
-                        project.layout.projectDirectory.dir("src/main/kotlin").asFile
-                    )
-                    remoteUrl.set(
-                        URL(
-                            "https://github.com/DissonantAU/bleatkan/tree/main/" +
-                                    "lib/src/main/kotlin"
-                        )
-                    )
-
-                    //println("Local Source Link: ${localDirectory.get()}")
-                    //println("Remote Source Link: ${remoteUrl.get()}")
-                }
-            }
-        }
+        dependsOn(dokkaGeneratePublicationJavadoc)
+        from(dokkaGeneratePublicationJavadoc.flatMap { it.outputDirectory })
     }
 
 
@@ -230,7 +176,6 @@ tasks {
             named("calculateLibraryVersion")
         )
         dependsOn(
-            //build,
             jar,
             kotlinSourcesJar,
         )
@@ -257,8 +202,8 @@ tasks {
         }
 
         mustRunAfter(named("calculateLibraryVersion"))
-        dependsOn(dokkaHtml)
-        from(dokkaHtml)
+        dependsOn(dokkaGeneratePublicationHtml)
+        from(dokkaGeneratePublicationHtml)
         into {
             buildsDir.dir("${project.extra["releaseName"]}-${project.extra["versionName"]}")
                 .dir("docs")
@@ -280,12 +225,49 @@ tasks {
         }
 
         mustRunAfter(named("calculateLibraryVersion"))
-        dependsOn(dokkaJavadoc)
-        from(dokkaJavadoc)
+        dependsOn(dokkaGeneratePublicationJavadoc)
+        from(dokkaGeneratePublicationJavadoc)
         into {
             buildsDir.dir("${project.extra["releaseName"]}-${project.extra["versionName"]}").dir("docs").dir("javadoc")
         }
     }
+
+    register<Copy>("copyToLibBuildsHtmlJar") {
+        duplicatesStrategy = DuplicatesStrategy.WARN
+
+        doFirst {
+            println(
+                "Copy to '${
+                    buildsDir.dir("${project.extra["releaseName"]}-${project.extra["versionName"]}")
+                }'"
+            )
+        }
+
+        dependsOn(named("dokkaGenerateHtmlJar"))
+        from(named("dokkaGenerateHtmlJar"))
+        into {
+            buildsDir.dir("${project.extra["releaseName"]}-${project.extra["versionName"]}")
+        }
+    }
+
+    register<Copy>("copyToLibBuildsJavadocJar") {
+        duplicatesStrategy = DuplicatesStrategy.WARN
+
+        doFirst {
+            println(
+                "Copy to '${
+                    buildsDir.dir("${project.extra["releaseName"]}-${project.extra["versionName"]}")
+                }'"
+            )
+        }
+
+        dependsOn(named("dokkaGenerateJavadocJar"))
+        from(named("dokkaGenerateJavadocJar"))
+        into {
+            buildsDir.dir("${project.extra["releaseName"]}-${project.extra["versionName"]}")
+        }
+    }
+
 
     /* Meta Build Jobs */
 
@@ -300,8 +282,8 @@ tasks {
         finalizedBy(
             named("calculateLibraryVersion"),
             named("copyToLibBuilds"),
-            named("copyToLibBuildsHtml"),
-            named("copyToLibBuildsJavadoc"),
+            named("copyToLibBuildsHtmlJar"),
+            named("copyToLibBuildsJavadocJar"),
         )
     }
 
@@ -316,8 +298,8 @@ tasks {
         finalizedBy(
             named("calculateLibraryVersion"),
             named("copyToLibBuilds"),
-            //named("copyToLibBuildsHtml"),
-            //named("copyToLibBuildsJavadoc"),
+            //named("copyToLibBuildsHtmlJar"),
+            //named("copyToLibBuildsJavadocJar"),
         )
     }
 
@@ -330,10 +312,10 @@ tasks {
         }
 
         finalizedBy(
-            //named("calculateLibraryVersion"),
+            named("calculateLibraryVersion"),
             //named("copyToLibBuilds"),
-            named("copyToLibBuildsHtml"),
-            named("copyToLibBuildsJavadoc"),
+            named("copyToLibBuildsHtmlJar"),
+            named("copyToLibBuildsJavadocJar"),
         )
     }
 
@@ -348,8 +330,8 @@ tasks {
         finalizedBy(
             named("calculateLibraryVersion"),
             named("copyToLibBuilds"),
-            named("copyToLibBuildsHtml"),
-            named("copyToLibBuildsJavadoc"),
+            named("copyToLibBuildsHtmlJar"),
+            named("copyToLibBuildsJavadocJar"),
         )
     }
 
@@ -364,8 +346,8 @@ tasks {
         finalizedBy(
             named("calculateLibraryVersion"),
             named("copyToLibBuilds"),
-            //named("copyToLibBuildsHtml"),
-            //named("copyToLibBuildsJavadoc"),
+            //named("copyToLibBuildsHtmlJar"),
+            //named("copyToLibBuildsJavadocJar"),
         )
     }
 
@@ -378,10 +360,10 @@ tasks {
         }
 
         finalizedBy(
-            //named("calculateLibraryVersion"),
+            named("calculateLibraryVersion"),
             //named("copyToLibBuilds"),
-            named("copyToLibBuildsHtml"),
-            named("copyToLibBuildsJavadoc"),
+            named("copyToLibBuildsHtmlJar"),
+            named("copyToLibBuildsJavadocJar"),
         )
     }
 
@@ -396,8 +378,8 @@ tasks {
         finalizedBy(
             named("calculateLibraryVersion"),
             named("copyToLibBuilds"),
-            named("copyToLibBuildsHtml"),
-            named("copyToLibBuildsJavadoc"),
+            named("copyToLibBuildsHtmlJar"),
+            named("copyToLibBuildsJavadocJar"),
         )
     }
 
@@ -412,8 +394,8 @@ tasks {
         finalizedBy(
             named("calculateLibraryVersion"),
             named("copyToLibBuilds"),
-            //named("copyToLibBuildsHtml"),
-            //named("copyToLibBuildsJavadoc"),
+            //named("copyToLibBuildsHtmlJar"),
+            //named("copyToLibBuildsJavadocJar"),
         )
     }
 
@@ -426,10 +408,10 @@ tasks {
         }
 
         finalizedBy(
-            //named("calculateLibraryVersion"),
+            named("calculateLibraryVersion"),
             //named("copyToLibBuilds"),
-            named("copyToLibBuildsHtml"),
-            named("copyToLibBuildsJavadoc"),
+            named("copyToLibBuildsHtmlJar"),
+            named("copyToLibBuildsJavadocJar"),
         )
     }
 
@@ -453,6 +435,36 @@ publishing {
             name = "tempRepo"
             url = uri(layout.buildDirectory.dir("repo"))
         }
+    }
+}
+
+
+// Dokka Config Gen - https://kotlinlang.org/docs/dokka-migration.html https://github.com/Kotlin/dokka/blob/1.9.20/examples/gradle/dokka-gradle-example/build.gradle.kts
+dokka {
+    // used as project name in the header
+    moduleName.set("BleatKan")
+
+    dokkaSourceSets.main {
+        sourceLink {
+
+            localDirectory.set(
+                project.layout.projectDirectory.dir("src/main/kotlin").asFile
+            )
+            remoteUrl(
+                "https://github.com/DissonantAU/bleatkan/tree/main/" +
+                        "lib/src/main/kotlin"
+            )
+
+            localDirectory.set(file("src/main/kotlin"))
+            remoteUrl("https://example.com/src")
+            remoteLineSuffix.set("#L")
+        }
+    }
+
+    // Dokka generates a new process managed by Gradle
+    dokkaGeneratorIsolation = ProcessIsolation {
+        // Configures heap size
+        maxHeapSize = "4g"
     }
 }
 
