@@ -1,31 +1,35 @@
 [versions]
-# 2.0.20 > 2.0.21
-kotlin = "2.0.21"
 
-# 1.9.0
-coroutines = "1.9.0"
+# 2.0.21 > 2.1.0
+kotlin = "2.1.0"
+# 1.9.0 > 1.10.1
+coroutines = "1.10.1"
 
-# "2.3.12" > 3.0.1
-ktor = "3.0.1"
-
+# 2.3.12 > 3.0.3
+ktor = "3.0.3"
 # 1.7.2 > 1.7.3
 serialization-json = "1.7.3"
 
-# 1.9.20 > 2.0.0
-dokka = "2.0.0"
+## Logging
 
-# 2.23.1
+# 2.23.1 > 2.24.3
 log4j = "2.24.3"
 # 2.0.16
 slf4j = "2.0.16"
-# 7.0.0 - prev 5.1.4
+# 7.0.0 > 7.0.3
 kotlinLogging = "7.0.3"
 
-# 5.11.0 - Prev 5.10.3
-jUnit = "5.11.4"
+## Testing
 
-# 1.13.12
+# 5.11.3 > 5.11.4
+jUnit = "5.11.4"
+# 1.13.13 > 1.13.14
 mockk = "1.13.14"
+
+## Build
+
+# 1.9.20 > 2.0.0
+dokka = "2.0.0"
 
 
 [libraries]
@@ -58,6 +62,8 @@ ktor-serialization = { module = "io.ktor:ktor-serialization" }
 ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json" }
 ktor-client-mock = { module = "io.ktor:ktor-client-mock" }
 
+## Logging
+
 # https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-bom
 log4j-bom = { module = "org.apache.logging.log4j:log4j-bom", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core" }
@@ -70,6 +76,8 @@ slf4j-api = { module = "org.slf4j:slf4j-api" }
 
 # https://mvnrepository.com/artifact/io.github.oshai/kotlin-logging-jvm
 logging-kotlin = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlinLogging" }
+
+## Testing
 
 # https://mvnrepository.com/artifact/org.junit/junit-bom
 junit-bom = { module = "org.junit:junit-bom", version.ref = "jUnit" }
@@ -87,10 +95,9 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 kotlin-gradle = { id = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-serialization-gradle = { id = "org.jetbrains.kotlin.plugin.serialization:org.jetbrains.kotlin.plugin.serialization.gradle.plugin", version.ref = "kotlin" }
 
+## Build
+
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 dokka-javadoc = { id = "org.jetbrains.dokka-javadoc", version.ref = "dokka" }
 
 [bundles]
-
-
-
