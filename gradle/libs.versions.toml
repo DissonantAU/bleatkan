@@ -95,8 +95,6 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 kotlin-gradle = { id = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-serialization-gradle = { id = "org.jetbrains.kotlin.plugin.serialization:org.jetbrains.kotlin.plugin.serialization.gradle.plugin", version.ref = "kotlin" }
 
-## Build
-
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 dokka-javadoc = { id = "org.jetbrains.dokka-javadoc", version.ref = "dokka" }
 
