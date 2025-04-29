@@ -340,6 +340,9 @@ class VeadoRequest {
                             )
                         }
 
+                        //TODO
+                        MessagePayloadType.BOOLEAN,MessagePayloadType.NUMBER -> throw IllegalArgumentException("BOOLEAN and NUMBER are unsupported in this function")
+
                         /* Type not specified - invalid */
                         null -> {
                             throw IllegalArgumentException("Type cannot be Null for Request ${MessageEvent.PAYLOAD}")
@@ -348,6 +351,7 @@ class VeadoRequest {
                         MessagePayloadType.UNKNOWN -> {
                             throw IllegalArgumentException("Type cannot be UNKNOWN")
                         }
+
                     }
                 }
 
@@ -517,6 +521,26 @@ class VeadoRequest {
                         errorSb.append { "event (${requestData.event});" }
                     }
                     /* Check VtRequestNodeList Block End */
+                }
+
+                (requestData is RequestMessageNodeEventToken) -> {
+                    /* Check RequestMessageNodeEventToken Block Start */
+                    when (MessageEvent.fromValue(requestData.event)) {
+                        /* Token Check */
+                        MessageEvent.LISTEN, MessageEvent.UNLISTEN -> {
+                            /* Valid, make sure not blank */
+                            if (requestData.token.isBlank()) {
+                                valid = false
+                                errorSb.append { "token (is blank);" }
+                            }
+                        }
+
+                        else -> {
+                            valid = false
+                            errorSb.append { "event (${requestData.event});" }
+                        }
+                    }
+                    /* Check RequestMessageNodeEventToken Block End */
                 }
 
                 (requestData is RequestMessageNodeEvent) -> {
