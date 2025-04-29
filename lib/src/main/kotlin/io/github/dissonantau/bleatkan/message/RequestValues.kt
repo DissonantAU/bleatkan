@@ -7,18 +7,27 @@ enum class MessageEvent(val value: String) {
     UNKNOWN("UNKNOWN"),
     ERROR("ERROR"),
     /* Message is targeting a specific node */
-    /** For a Request that targets a node (eg stateEvents)*/
+    /** For a Request that targets a node (e.g. stateEvents) */
     @SerialName("payload")
     PAYLOAD("payload"),
 
-    /* Requesting Values*/
-    /** Requests a List of Possible Values*/
+    /* Requesting Values */
+    /** Requests a List of Possible Values */
     @SerialName("list")
     LIST("list"),
 
     /** Requests for Instance Info (Target *Instance* Channel) */
     @SerialName("info")
     INFO("info"),
+
+    /* Listening to Value Changes */
+    /** Listens to changes to the Nodes List */
+    @SerialName("listen")
+    LISTEN("listen"),
+
+    /** Stops listening to changes to the Nodes List */
+    @SerialName("unlisten")
+    UNLISTEN("unlisten"),
     ;
 
     companion object {
@@ -27,7 +36,7 @@ enum class MessageEvent(val value: String) {
          *
          * Returns UNKNOWN ENUM if not found
          *
-         *@return Enum Constant
+         * @return Enum Constant
          */
         @JvmStatic
         fun fromValue(value: String): MessageEvent {
@@ -42,6 +51,12 @@ enum class MessagePayloadType(val value: String) {
 
     @SerialName("stateEvents")
     STATE_EVENTS("stateEvents"),
+
+    @SerialName("boolean")
+    BOOLEAN("boolean"),
+
+    @SerialName("number")
+    NUMBER("number"),
     ;
 
     companion object {
@@ -50,7 +65,7 @@ enum class MessagePayloadType(val value: String) {
          *
          * Returns UNKNOWN ENUM if not found
          *
-         *@return Enum Constant
+         * @return Enum Constant
          */
         @JvmStatic
         fun fromValue(value: String): MessagePayloadType {
@@ -73,7 +88,7 @@ enum class MessagePayloadId(val value: String) {
          *
          * Returns UNKNOWN ENUM if not found
          *
-         *@return Enum Constant
+         * @return Enum Constant
          */
         @JvmStatic
         fun fromValue(value: String): MessagePayloadId {
@@ -87,39 +102,72 @@ enum class PayloadEvent(val value: String) {
     UNKNOWN("UNKNOWN"),
 
     /* Requesting Values*/
-    /** Requests a List of Possible Values*/
+    /** Requests a List of Possible Values */
     @SerialName("list")
     LIST("list"),
 
-    /** Requests current Single Value*/
+    /** Requests current Single Value of a stack (e.g State) */
     @SerialName("peek")
     PEEK("peek"),
 
-    /** Requests the image related to a Possible Value*/
+    /** Requests the image related to a Possible Value */
     @SerialName("thumb")
     THUMB("thumb"),
 
     /* Setting Values */
-    /** Sets a Single Value*/
+    /** Sets a Single Value (Both State or Boolean/Number) */
     @SerialName("set")
     SET("set"),
 
-    /** Pushes a Single Value*/
+    /** Pushes a Single Value */
     @SerialName("push")
     PUSH("push"),
 
-    /** Pops the last Pushed Single Value*/
+    /** Pops the last Pushed Single Value */
     @SerialName("pop")
     POP("pop"),
 
     /* Listening to Value Changes */
-    /** Listens to changes to a Channel Value*/
+    /** Listens to changes to a Channel Value */
     @SerialName("listen")
     LISTEN("listen"),
 
-    /** Stops listening to changes to a Channel Value*/
+    /** Stops listening to changes to a Channel Value */
     @SerialName("unlisten")
     UNLISTEN("unlisten"),
+
+    /* Non-stack Node Values */
+    /** Requests current Value of a node (e.g. boolean/number)
+     *
+     * See:
+     * * https://veado.tube/docs/tech/api/nodes/#number
+     * * https://veado.tube/docs/tech/api/nodes/#boolean
+     */
+    @SerialName("get")
+    GET("get"),
+
+    /** Toggle boolean node (e.g. true to false & vice-versa)
+     *
+     * See https://veado.tube/docs/tech/api/nodes/#boolean
+     */
+    @SerialName("toggle")
+    TOGGLE("toggle"),
+
+    /** Add (or subtract) number node
+     *
+     * See https://veado.tube/docs/tech/api/nodes/#number
+     */
+    @SerialName("add")
+    ADD("add"),
+
+    /** Clears current Value of a node (e.g. boolean/number)
+     *
+     * See:
+     * * https://veado.tube/docs/tech/api/nodes/#number
+     * * https://veado.tube/docs/tech/api/nodes/#boolean
+     */
+    @SerialName("clear")
+    CLEAR("clear"),
     ;
 
     companion object {
@@ -128,7 +176,7 @@ enum class PayloadEvent(val value: String) {
          *
          * Returns UNKNOWN ENUM if not found
          *
-         *@return Enum Constant
+         * @return Enum Constant
          */
         @JvmStatic
         fun fromValue(value: String): PayloadEvent {

@@ -56,6 +56,27 @@ sealed class RequestMessage {
         override val event: String
     ) : RequestMessage()
 
+    /**
+     * Message for listening for Node list changes
+     *
+     * @param event the action to be carried out
+     *
+     * e.g. [PayloadEvent.LISTEN] (*Listen*) will result in a State message being sent every time it changes, even when changed through the GUI or another API request.
+     *
+     * @param token unique id for event, same token needs to be used in subsequent related requests
+     *
+     * e.g. a [PayloadEvent.LISTEN] (*Listen*) Request using token '*abc123*' can be removed later by sending a [PayloadEvent.UNLISTEN] (*Unlisten*) Request with the same token
+     */
+    @Serializable
+    data class RequestMessageNodeEventToken(
+        override val event: String,
+        /**
+         * Unique ID for the listener - can be anything
+         * Token sent for UnListen must be the same as original Listen Request
+         */
+        val token: String
+    ) : RequestMessage()
+
     fun toJsonString(): String {
         return Json.encodeToString(this)
     }
@@ -94,7 +115,7 @@ sealed class RequestPayload {
      *
      * @param event the action to be carried out
      *
-     * e.g. [PayloadEvent.LIST] (*list*) will return the possible state values, [PayloadEvent.PEEK] (*peek*) will return the current state value
+     * e.g. [PayloadEvent.LIST] (*list*) will return the possible state values, [PayloadEvent.PEEK] (*peek*) will return the current state value, [PayloadEvent.GET] (*get*) for boolean
      */
     @Serializable
     class RequestPayloadEvent(
@@ -144,6 +165,62 @@ sealed class RequestPayload {
         val state: String
     ) : RequestPayload()
 
+    /**
+     * Used for Request Payloads that need a boolean
+     *
+     * @param event the action to be carried out
+     *
+     * e.g. [PayloadEvent.SET] (*Set*) will change the State (Current Displayed group of PNGs) to the State ID provided
+     *
+     * @param value true or false
+     *
+     */
+    @Serializable
+    data class RequestPayloadEventBooleanSet(
+        override val event: String,
+        /**
+         * Unique ID for the State
+         *
+         * i.e. the state id from a [MessageEvent.PAYLOAD] / [MessagePayloadType.STATE_EVENTS] / [PayloadEvent.LIST] request
+         */
+        val value: Boolean
+    ) : RequestPayload()
+
+
+    /**
+     * Used for Request Payloads that need a number
+     *
+     * @param event the action to be carried out
+     *
+     * e.g. [PayloadEvent.SET] (*Set*) will change the number to the value
+     * [PayloadEvent.ADD] (*Add*) will add the number to the value (negative number subtracts)
+     *
+     * @param value a number (Float/Double or Integer)
+     *
+     */
+    @Serializable
+    data class RequestPayloadEventNumberValue(
+        override val event: String,
+        val value: Double
+    ) : RequestPayload()
+
+    /**
+     * Used for Request Payloads that need a number and min/max values
+     *
+     * @param event the action to be carried out
+     *
+     * e.g. [PayloadEvent.SET] (*Set*) will change the number to the value
+     * [PayloadEvent.ADD] (*Add*) will add the number to the value (negative number subtracts)
+     *
+     * @param value [RequestPayloadEventNumberValuePayload]
+     *
+     */
+    @Serializable
+    data class RequestPayloadEventNumberValueMinMax(
+        override val event: String,
+        val value: RequestPayloadEventNumberValuePayload
+    ) : RequestPayload()
+
     fun toJsonString(): String {
         return Json.encodeToString(this)
     }
@@ -167,3 +244,24 @@ sealed class RequestPayload {
     fun validate() = VeadoRequest.validatePayload(this)
 
 }
+
+/**
+ * Payload with Number Value/Min/Max
+ *
+ * Min/Max Values can be null if they shouldn't be set/changed, but [RequestPayload.RequestPayloadEventNumberValue]
+ *
+ * Value is always required
+ *
+ * More Info https://veado.tube/docs/tech/api/nodes/#number
+ *
+ * @param value a number (Float/Double or Integer)
+ * @param min a number (Float/Double or Integer)
+ * @param max a number (Float/Double or Integer)
+ *
+ */
+@Serializable
+data class RequestPayloadEventNumberValuePayload(
+    val value: Double,
+    val min: Double? = null,
+    val max: Double? = null
+)

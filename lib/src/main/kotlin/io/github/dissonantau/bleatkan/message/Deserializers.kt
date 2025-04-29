@@ -41,13 +41,28 @@ object RequestPayloadDeserializer : JsonContentPolymorphicSerializer<RequestPayl
 object ResultMessageDeserializer : JsonContentPolymorphicSerializer<ResultMessage>(ResultMessage::class) {
     override fun selectDeserializer(element: JsonElement): DeserializationStrategy<ResultMessage> {
         val jsonObject = element.jsonObject
-        return when {
-            jsonObject.containsKey("payload") -> ResultMessage.ResultMessageWithPayload.serializer()
-            jsonObject.containsKey("entries") -> ResultMessage.ResultMessageWithEntryList.serializer()
-            jsonObject["event"]?.jsonPrimitive?.content == "info" -> ResultMessage.ResultMessageWithInstanceInfo.serializer()
+
+        return when (jsonObject["event"]?.jsonPrimitive?.content) {
+            null -> throw IllegalArgumentException("Payload event is null")
+
+            "payload" -> {
+                //Work out if "special" or regular payload
+
+                when (jsonObject["type"]?.jsonPrimitive?.content) {
+                    null -> throw IllegalArgumentException("Payload type is null")
+
+                    "number" -> ResultMessage.ResultMessageWithPayloadNumber.serializer()
+                    "boolean" -> ResultMessage.ResultMessageWithPayloadBoolean.serializer()
+                    else -> ResultMessage.ResultMessageWithPayload.serializer()
+                }
+            }
+
+            "list" -> ResultMessage.ResultMessageWithEntryList.serializer()
+            "info" -> ResultMessage.ResultMessageWithInstanceInfo.serializer()
 
             else -> throw IllegalArgumentException("Unsupported Payload type")
         }
+
     }
 }
 
