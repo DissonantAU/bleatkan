@@ -6,6 +6,7 @@ import io.github.dissonantau.bleatkan.connection.ConnectionListener
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.Comparator
 
 
 /**
@@ -119,10 +120,10 @@ data class Instance(
      *
      * It's recommended to provide a connection name to better identify the connection in Veadotube logs
      *
-     * @return URI for Instance with the default connection name attached. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=veadotube%20mini-123456789")
+     * @return URI for Instance with the default connection name attached. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=bleatkan-123456789")
      */
     fun getWebSocketUri(): URI =
-        getWebSocketUri(server, "$title-${System.currentTimeMillis()}")
+        getWebSocketUri(server, "bleatkan-${System.currentTimeMillis()}")
 
 
     /**
@@ -166,5 +167,9 @@ data class Instance(
             return URI("ws://$server?n=$encodedName")
 
         }
+
+        val COMPARATOR_INSTANCE_BY_ID: Comparator<Instance> = compareBy { it.id.timestamp }
+
+        val COMPARATOR_INSTANCE_BY_TITLE_LENGTH: Comparator<Instance> = compareBy { it.title.length }
     }
 }

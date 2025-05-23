@@ -31,6 +31,7 @@ import io.github.dissonantau.bleatkan.message.RequestMessage
 import io.github.dissonantau.bleatkan.message.ResultMessage
 import io.github.dissonantau.bleatkan.message.ResultPayload
 import io.github.dissonantau.bleatkan.message.*
+import java.util.Comparator
 
 
 /* //clientsMap not currently used
@@ -55,6 +56,12 @@ class Connection : AutoCloseable {
 
         private const val COLON_BYTE = ':'.code.toByte()
         private const val BRACE_OPEN_BYTE = '{'.code.toByte()
+
+        /**
+         * Compares by Instance Title Length, then Instance Start Timestamp
+         */
+        val COMPARATOR_CONNECTION_BY_INSTANCE_TITLE_LENGTH_TIMESTAMP: Comparator<Connection> =
+            compareBy({ it.instance.title.length }, { it.instance.id.timestamp })
 
         /**
          * Maximum Connection Errors in a row before giving up and
