@@ -116,7 +116,7 @@ class InstanceID : Comparable<InstanceID> {
     /**
      * Veadotube Instance Type/Edition
      *
-     * e.g. mini, live, editor, etc.
+     * e.g. mini, veado, etc.
      */
     val type: String
 
@@ -151,7 +151,6 @@ class InstanceID : Comparable<InstanceID> {
 
         if (other !is InstanceID) return false // Not type InstanceID
 
-
         val that: InstanceID = other //Cast to type
 
         return timestamp == that.timestamp && process == that.process && type == that.type
@@ -178,11 +177,12 @@ class InstanceID : Comparable<InstanceID> {
         return result
     }
 
-    @Suppress("unused")
+    @Suppress("unused","MemberVisibilityCanBePrivate")
     companion object {
         /**
          * String Format - Converts back to same format as instance file name
          */
+
         const val FORMAT_STRING = "%s-%016x-%08x"
 
         /**
