@@ -41,7 +41,7 @@ sealed class ResultMessage {
     ) : ResultMessage()
 
     /**
-     * Result Message with Boolean Payload
+     * Result Message with Number Payload
      */
     @Serializable
     //@SerialName("payload") //type number
@@ -242,7 +242,7 @@ sealed class ResultPayload {
  */
 @Serializable
 data class ResultPayloadSpecialNumber(
-    val value: Double? = null,
+    val value: Double,
     val min: Double? = null,
     val max: Double? = null
 )
