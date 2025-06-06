@@ -144,7 +144,7 @@ sealed class RequestPayload {
     ) : RequestPayload()
 
     /**
-     * Used for Request Payloads that need a state, e.g. Set/Push/Pop/Thumb
+     * Used for Request Payloads that need a State String, e.g. Set/Push/Pop/Thumb
      *
      * @param event the action to be carried out
      *
@@ -155,7 +155,7 @@ sealed class RequestPayload {
      * i.e. the State IF from a [MessageEvent.PAYLOAD] / [MessagePayloadType.STATE_EVENTS] / [PayloadEvent.LIST] request
      */
     @Serializable
-    data class RequestPayloadEventState(
+    data class RequestPayloadEventStateString(
         override val event: String,
         /**
          * Unique ID for the State
@@ -166,7 +166,7 @@ sealed class RequestPayload {
     ) : RequestPayload()
 
     /**
-     * Used for Request Payloads that need a boolean
+     * Used for Request Payloads that need a Boolean Value
      *
      * @param event the action to be carried out
      *
@@ -176,7 +176,7 @@ sealed class RequestPayload {
      *
      */
     @Serializable
-    data class RequestPayloadEventBooleanSet(
+    data class RequestPayloadEventValueBoolean(
         override val event: String,
         /**
          * Unique ID for the State
@@ -188,7 +188,27 @@ sealed class RequestPayload {
 
 
     /**
-     * Used for Request Payloads that need a number
+     * Used for Request Payloads that needs a String Value
+     *
+     * @param event the action to be carried out
+     *
+     * e.g. [PayloadEvent.SET] (*Set*) will change the State based on the String Provided
+     * * A Boolean Node accepts "toggle" or "clear"
+     *
+     * @param value String for node, e.g. "toggle" or "clear"
+     *
+     */
+    @Serializable
+    data class RequestPayloadEventValueString(
+        override val event: String,
+        /**
+         * String for event. e.g. "toggle" or "clear"
+         */
+        val value: String
+    ) : RequestPayload()
+
+    /**
+     * Used for Request Payloads that need a Value Number
      *
      * @param event the action to be carried out
      *
@@ -199,7 +219,7 @@ sealed class RequestPayload {
      *
      */
     @Serializable
-    data class RequestPayloadEventNumberValue(
+    data class RequestPayloadEventValueNumber(
         override val event: String,
         val value: Double
     ) : RequestPayload()
@@ -212,15 +232,18 @@ sealed class RequestPayload {
      * e.g. [PayloadEvent.SET] (*Set*) will change the number to the value
      * [PayloadEvent.ADD] (*Add*) will add the number to the value (negative number subtracts)
      *
-     * @param value [RequestPayloadEventNumberValuePayload]
+     * @param value [RequestPayloadEventNumberValueMulti]
      *
      */
     @Serializable
-    data class RequestPayloadEventNumberValueMinMax(
+    data class RequestPayloadEventValueNumberMinMax(
         override val event: String,
-        val value: RequestPayloadEventNumberValuePayload
+        val value: RequestPayloadEventNumberValueMulti
     ) : RequestPayload()
 
+    /**
+     * Encodes Request Payload as JSON String
+     */
     fun toJsonString(): String {
         return Json.encodeToString(this)
     }
@@ -248,7 +271,7 @@ sealed class RequestPayload {
 /**
  * Payload with Number Value/Min/Max
  *
- * Min/Max Values can be null if they shouldn't be set/changed, but [RequestPayload.RequestPayloadEventNumberValue]
+ * Min/Max Values can be null if they shouldn't be set/changed, but [RequestPayload.RequestPayloadEventValueNumber]
  *
  * Value is always required
  *
@@ -260,7 +283,7 @@ sealed class RequestPayload {
  *
  */
 @Serializable
-data class RequestPayloadEventNumberValuePayload(
+data class RequestPayloadEventNumberValueMulti(
     val value: Double,
     val min: Double? = null,
     val max: Double? = null

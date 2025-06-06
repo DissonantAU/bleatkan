@@ -27,7 +27,28 @@ object RequestPayloadDeserializer : JsonContentPolymorphicSerializer<RequestPayl
         val jsonObject = element.jsonObject
         return when {
             jsonObject.containsKey("token") -> RequestPayload.RequestPayloadEventToken.serializer()
-            jsonObject.containsKey("state") -> RequestPayload.RequestPayloadEventState.serializer()
+            jsonObject.containsKey("state") -> RequestPayload.RequestPayloadEventStateString.serializer()
+            jsonObject.containsKey("value") -> {
+                val value = jsonObject.getValue("value")
+                if (value is JsonPrimitive) {
+                    // if boolean
+                    if (value.booleanOrNull != null) RequestPayload.RequestPayloadEventValueBoolean.serializer()
+                    // if double
+                    else if (value.doubleOrNull != null) RequestPayload.RequestPayloadEventValueNumber.serializer()
+                    // fallback in case integer isn't decoded at double
+                    else if (value.longOrNull != null) RequestPayload.RequestPayloadEventValueNumber.serializer()
+                    // unsupported
+                    else throw IllegalArgumentException("Unsupported Payload -> Value type")
+                } else if (value is JsonObject) {
+                    /* Number Value Group */
+                    RequestPayload.RequestPayloadEventValueNumberMinMax.serializer()
+                } else {
+                    throw IllegalArgumentException("Unsupported Payload -> Value type")
+                }
+
+
+            }
+
             jsonObject.containsKey("event") -> RequestPayload.RequestPayloadEvent.serializer()
 
             else -> throw IllegalArgumentException("Unsupported Payload type")
