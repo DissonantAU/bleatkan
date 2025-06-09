@@ -17,20 +17,20 @@ class VeadoRequest {
 
     companion object FACTORY {
 
-        /* Common Requests that can be reused - using lazy initialisation to only create when first accessed */
+        /* Common Requests that can be reused - sometimes using lazy initialisation to only create when first accessed */
         /** Request of *event: info* - Should be sent to Instance Channel  */
         @JvmStatic
         val getEventInfo: RequestMessage =
             RequestMessageInstanceInfo(event = MessageEvent.INFO.value)
 
 
-        /** Request of *event: list* - Lazy Initialized equivalent of *[getPayloadEventList] as VeadoRequest* */
+        /** Request of *event: list* - For getting a List of Nodes from Nodes Channel */
         @JvmStatic
         val getEventList: RequestMessage =
             RequestMessageNodeList(event = MessageEvent.LIST.value)
 
 
-        /** Request Payload of *event: list* */
+        /** Request Payload of *event: list* - For getting a List of States in a Node */
         @JvmStatic
         val getPayloadEventList: RequestPayload =
             RequestPayloadEvent(event = PayloadEvent.LIST.value)
@@ -42,13 +42,25 @@ class VeadoRequest {
             RequestPayloadEvent(event = PayloadEvent.PEEK.value)
 
 
+        /** Request Payload of *event: get* */
+        @JvmStatic
+        val getPayloadEventGet: RequestPayload =
+            RequestPayloadEvent(event = PayloadEvent.GET.value)
+
+
+        /** Request Payload of *event: set* */
+        @JvmStatic
+        val getPayloadEventSet: RequestPayload =
+            RequestPayloadEvent(event = PayloadEvent.SET.value)
+
+
         /** Request Payload of *event: toggle* */
         @JvmStatic
         val getPayloadEventToggle: RequestPayload =
             RequestPayloadEvent(event = PayloadEvent.TOGGLE.value)
 
 
-        /** Request Payload of *event: toggle* */
+        /** Request Payload of *event: clear* */
         @JvmStatic
         val getPayloadEventClear: RequestPayload =
             RequestPayloadEvent(event = PayloadEvent.CLEAR.value)
