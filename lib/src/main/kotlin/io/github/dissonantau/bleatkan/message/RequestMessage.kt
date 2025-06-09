@@ -38,7 +38,8 @@ sealed class RequestMessage {
         /**
          * Node ID to send the request to
          *
-         * e.g. mini
+         * e.g. mini for veadotube mini
+         * Veadotube 'full' needs actual node ID - will be random per-node such as `299f3e5e` unless set manually
          */
         val id: String,
         /**
