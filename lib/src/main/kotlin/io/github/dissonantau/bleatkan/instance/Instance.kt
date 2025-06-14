@@ -91,14 +91,15 @@ data class Instance(
      * A new Instance created with the same inputs would have the same instanceConnectionID
      */
     val instanceConnectionID: String
+        get() {
+            return "${id}-$server-$title"
+        }
 
 
     init {
         require(id.type.isNotEmpty()) { "InstanceID is not Valid" }
         require(server.isNotBlank()) { "serverAddress is blank" }
         require(title.isNotBlank()) { "instanceName is blank" }
-
-        instanceConnectionID = "${id}-$server-$title"
     }
 
     @JvmOverloads
@@ -123,7 +124,7 @@ data class Instance(
      * @return URI for Instance with the default connection name attached. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=bleatkan-123456789")
      */
     fun getWebSocketUri(): URI =
-        getWebSocketUri(server, "bleatkan-${System.currentTimeMillis()}")
+        getWebSocketUri(server, "bleatkan-$id-${System.currentTimeMillis()}")
 
 
     /**
@@ -142,10 +143,13 @@ data class Instance(
      * Equivalent of Connection(instance (this), receiver)
      *
      * @param listener Object to be sent events by Connection Object
-     * @param connectionName [String] Name used with Websocket to Identify Connection in Veadotube Logs - defaults to `"bleatkan-instance-${System.currentTimeMillis()}"` if not provided.
+     * @param connectionName [String] Name used with Websocket to Identify Connection in Veadotube Logs - defaults to `"bleatkan-${System.currentTimeMillis()}"` if not provided.
      * @return Connection
      */
-    fun connect(listener: ConnectionListener,connectionName:String = "bleatkan-instance-${System.currentTimeMillis()}"): Connection {
+    fun connect(
+        listener: ConnectionListener,
+        connectionName: String = "bleatkan-${System.currentTimeMillis()}"
+    ): Connection {
         return Connection(instance = this, listener = listener, connectionName = connectionName)
     }
 

@@ -102,11 +102,24 @@ sealed class ResultMessage {
         val id: String,
         /** Instance Server address - *IP:Port* */
         val server: String,
-        /** Instance name/title */
-        val name: String,
+        /** Instance name/title
+         *
+         * Called 'name' in JSON and API Documentation but called 'title' here for clarity in code
+         */
+        @SerialName("name")
+        val title: String,
         /** Instance Version - "2.1a" */
         val version: String,
-    ) : ResultMessage()
+    ) : ResultMessage() {
+        /**
+         * Instance name/title
+         *
+         * Convenience getter for [title] to avoid confusion when comparing to Official API Documentation
+         */
+        val name: String
+            get() = title
+
+    }
 
     /**
      * Channel message was received from

@@ -225,7 +225,11 @@ class InstancesManager(
 
                                     LOGGER.debug { "processInstanceFile: Existing instance replaced - $existingInstance > $newInstanceObj" }
 
-                                    instanceEventListener.onInstanceChangeMajor(newInstanceObj, existingInstance)
+                                    try {
+                                        instanceEventListener.onInstanceChangeMajor(newInstanceObj, existingInstance)
+                                    } catch (ex: Exception) {
+                                        LOGGER.debug { "processInstanceFile: Failed to call onInstanceChangeMajor for ${existingInstance}/${newInstanceObj}: ${ex.message}; ${ex.stackTraceToString()}" }
+                                    }
                                 }
 
                                 existingInstance.title != veadoInstanceFile.name -> {
@@ -234,21 +238,31 @@ class InstancesManager(
 
                                     LOGGER.debug { "processInstanceFile: Existing instance updated - $existingInstance" }
 
+                                    // Update title in existing Instance - we're not sending a new Instance to Listeners
                                     val oldName = existingInstance.title
                                     existingInstance.title = veadoInstanceFile.name
 
-                                    instanceEventListener.onInstanceChangeMinor(
-                                        instance = existingInstance,
-                                        change = InstanceChange.NAME,
-                                        oldValue = oldName
-                                    )
+                                    try {
+                                        instanceEventListener.onInstanceChangeMinor(
+                                            instance = existingInstance,
+                                            change = InstanceChange.NAME,
+                                            oldValue = oldName
+                                        )
+                                    } catch (ex: Exception) {
+                                        LOGGER.debug { "processInstanceFile: Failed to call onInstanceChangeMinor for ${existingInstance}: ${ex.message}; ${ex.stackTraceToString()}" }
+                                    }
                                 }
                             }
 
 
                         } else {
                             LOGGER.debug { "processInstanceFile: New instance added - $existingInstance" }
-                            instanceEventListener.onInstanceStart(existingInstance)
+                            try {
+                                instanceEventListener.onInstanceStart(existingInstance)
+                            } catch (ex: Exception) {
+                                LOGGER.debug { "processInstanceFile: Failed to call onInstanceStart for ${existingInstance}: ${ex.message}; ${ex.stackTraceToString()}" }
+                            }
+
                         }
 
                     }
@@ -318,11 +332,11 @@ class InstancesManager(
                 //Calculate loop time and delay before next loop
                 val loopTimeSeconds = Instant.now().epochSecond - loopStartTime
                 var delayTimeMSec =
-                    READ_LOOP_DELAY_MAX_MS - (loopTimeSeconds * 1000) //Start time minus End Time = Seconds Passed
-                when {
-                    (delayTimeMSec < READ_LOOP_DELAY_MIN_MS) -> delayTimeMSec = READ_LOOP_DELAY_MIN_MS //min wait
-                    (delayTimeMSec > READ_LOOP_DELAY_MAX_MS) -> delayTimeMSec = READ_LOOP_DELAY_MAX_MS //max wait
-                }
+                    (READ_LOOP_DELAY_MAX_MS - (loopTimeSeconds * 1000))
+                        .coerceIn(
+                            minimumValue = READ_LOOP_DELAY_MIN_MS,
+                            maximumValue = READ_LOOP_DELAY_MAX_MS
+                        )
 
                 // If no files processed this loop, double wait time
                 if (!filesFound) delayTimeMSec *= 2
