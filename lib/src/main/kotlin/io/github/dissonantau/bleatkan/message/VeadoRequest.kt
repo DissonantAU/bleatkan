@@ -54,12 +54,6 @@ class VeadoRequest {
             RequestPayloadEvent(event = PayloadEvent.SET.value)
 
 
-        /** Request Payload of *event: toggle* */
-        @JvmStatic
-        val getPayloadEventToggle: RequestPayload =
-            RequestPayloadEvent(event = PayloadEvent.TOGGLE.value)
-
-
         /** Request Payload of *event: clear* */
         @JvmStatic
         val getPayloadEventClear: RequestPayload =
@@ -101,6 +95,40 @@ class VeadoRequest {
         val getPeekStateMini: RequestMessage by lazy {
             createRequest(payload = getPayloadEventPeek)
         }
+
+        /**
+         * Returns a Request [RequestMessage] with passed [PayloadEvent] State Payload [RequestPayload]
+         *
+         * Convenience Function to build an Avatar State Request with the passed [PayloadEvent]
+         *
+         * Equivalent of
+         * createRequest(
+         *  event = [MessageEvent.PAYLOAD],
+         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  id = [MessagePayloadId.MINI],
+         *  payload = createPayload(
+         *   event = [PayloadEvent],
+         *   value = [stateID]
+         *  )
+         * )
+         *
+         * @see createRequest
+         * @see createPayload
+         *
+         */
+        @JvmStatic
+        fun createChangeStateMini(
+            action: PayloadEvent,
+            stateID: String
+        ) = createRequest(
+            event = MessageEvent.PAYLOAD,
+            type = MessagePayloadType.STATE_EVENTS,
+            id = MessagePayloadId.MINI,
+            payload = createPayload(
+                event = action,
+                value = stateID
+            )
+        )
 
         /**
          * Returns a Request [RequestMessage] with a Set State Payload [RequestPayload]
@@ -200,6 +228,71 @@ class VeadoRequest {
                 value = stateID
             )
         )
+
+
+        /**
+         * Returns a Request [RequestMessage] with a Toggle State Payload [RequestPayload]
+         *
+         * Convenience Function to build a Toggle Avatar State Request
+         *
+         * Equivalent of
+         * createRequest(
+         *  event = [MessageEvent.PAYLOAD],
+         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  id = [MessagePayloadId.MINI],
+         *  payload = createPayload(
+         *   event = [PayloadEvent.TOGGLE],
+         *   value = [stateID]
+         *  )
+         * )
+         *
+         * @see createRequest
+         * @see createPayload
+         *
+         */
+        @JvmStatic
+        fun createToggleStateMini(
+            stateID: String
+        ) = createRequest(
+            event = MessageEvent.PAYLOAD,
+            type = MessagePayloadType.STATE_EVENTS,
+            id = MessagePayloadId.MINI,
+            payload = createPayload(
+                event = PayloadEvent.TOGGLE,
+                value = stateID
+            )
+        )
+
+
+        /**
+         * Returns a Request [RequestMessage] with a Clear State Payload [RequestPayload]
+         *
+         * Convenience Function to build a Clear Avatar State Request
+         *
+         * Equivalent of
+         * createRequest(
+         *  event = [MessageEvent.PAYLOAD],
+         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  id = [MessagePayloadId.MINI],
+         *  payload = createPayload(
+         *   event = [PayloadEvent.CLEAR]
+         *  )
+         * )
+         *
+         * @see createRequest
+         * @see createPayload
+         *
+         */
+        @JvmStatic
+        fun createClearStateMini() = createRequest(
+            event = MessageEvent.PAYLOAD,
+            type = MessagePayloadType.STATE_EVENTS,
+            id = MessagePayloadId.MINI,
+            payload = createPayload(
+                event = PayloadEvent.CLEAR
+            )
+        )
+
 
         /**
          * Returns a Request [RequestMessage] with a Listen State Payload [RequestPayload]
@@ -436,11 +529,6 @@ class VeadoRequest {
                         getPayloadEventPeek
                     }
 
-                    PayloadEvent.TOGGLE -> {
-                        /*Return Common/Reusable Object*/
-                        getPayloadEventToggle
-                    }
-
                     PayloadEvent.CLEAR -> {
                         /*Return Common/Reusable Object*/
                         getPayloadEventClear
@@ -454,7 +542,7 @@ class VeadoRequest {
                         )
                     }
 
-                    PayloadEvent.SET, PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB -> {
+                    PayloadEvent.SET, PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB, PayloadEvent.TOGGLE -> {
                         require(!value.isNullOrBlank()) { "State Value for Payload $event Event can't be Null or Blank" }
                         RequestPayloadEventStateString(
                             event = event.value,

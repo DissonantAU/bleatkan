@@ -217,7 +217,7 @@ class Connection : AutoCloseable {
 
     /* End Client Vars */
 
-    private var activeLoop = false
+    private var connectionActive = false
     var isConnected = false
         private set
 
@@ -232,7 +232,7 @@ class Connection : AutoCloseable {
      *
      * @param instance [Instance] this Connection will connect to
      * @param listener [ConnectionListener] to get callbacks
-     * @param connectionName [String] Name used with Websocket to Identify Connection in Veadotube Logs - defaults to `"bleatkan-${instance.id}"` if not provided.
+     * @param connectionName [String] Name used with Websocket to Identify Connection in Veadotube Logs - defaults to `"bleatkan-${instance.id}"` if not provided. [connectionTimeMillis] is added to the end
      * @param connectionJobParent **Optional** [Job] that will be used in the Scope of the Websocket Receiver Loop.
      * A default Job and Supervisor is used of none is provided, allowing all Connections to be closed using [Connection.closeAll]
      *
@@ -248,14 +248,12 @@ class Connection : AutoCloseable {
     ) {
         LOGGER.trace { "Constructing Connection" }
         require(instance.server.isNotBlank())
-        require(instance.title.isNotBlank())
+        require(connectionName.isNotBlank())
 
         this.server = instance.server
-
-        this.name = connectionName
-
+        connectionTimeMillis = System.currentTimeMillis()
+        this.name = "$connectionName-${connectionTimeMillis}"
         this.instance = instance
-
         connectionListener = listener
 
 
@@ -273,17 +271,15 @@ class Connection : AutoCloseable {
         id = connUri.toString()
 
         // Compatibility flags
-        if (instance.version == "2.0") {
+        if (instance.id.type == "mini" && instance.version == "2.0") {
             //Compatibility flag for pre 2.1
             compatibilityFlagMiniPre2dot1 = true
-            LOGGER.debug { "API Compatibility Flag set: Pre-Version 2.1" }
+            LOGGER.debug { "API Compatibility Flag set: Mini Pre-Version 2.1" }
         }
-
-        connectionTimeMillis = System.currentTimeMillis()
 
         setupHttpClient()
 
-        activeLoop = true
+        connectionActive = true
 
         /* Coroutine setup and Launch */
         connectionJob = SupervisorJob(connectionJobParent)
@@ -371,10 +367,11 @@ class Connection : AutoCloseable {
     ) {
         LOGGER.trace { "Constructing Connection" }
         require(instance.server.isNotBlank())
-        require(instance.title.isNotBlank())
+        require(connectionName.isNotBlank())
 
         this.server = instance.server
-        this.name = connectionName
+        connectionTimeMillis = System.currentTimeMillis()
+        this.name = "$connectionName-${connectionTimeMillis}"
         this.instance = instance
         connectionListener = listener
 
@@ -398,12 +395,9 @@ class Connection : AutoCloseable {
             LOGGER.debug { "API Compatibility Flag set: Version 2" }
         }
 
-        connectionTimeMillis = System.currentTimeMillis()
-
-
         //setupHttpClient() // Testing - Skipped
 
-        activeLoop = true
+        connectionActive = true
 
         /* Coroutine setup and Launch */
         connectionJob = SupervisorJob(connectionDefaultJobParent)
@@ -538,103 +532,91 @@ class Connection : AutoCloseable {
         LOGGER.trace { "runWebsocketWatcher: Begin" }
 
         var closeReason: CloseReason? = null
-        var errorCount = 0
 
         try {
 
-            while (activeLoop && websocketScope.isActive) {
-                /* Start Websocket Loop Block */
+            /* Start Websocket Block */
+            try {
 
                 try {
-
-                    try {
-                        LOGGER.trace { "runWebsocketWatcher: Launch startWebsocket" }
-                        startWebsocketSession()
-                    } finally {
-                        //Make sure we get Close Reason
-                        closeReason = webSocketCloseReason?.await()
-                        LOGGER.trace { "runWebsocketWatcher: Websocket Close Reason = $closeReason" }
-                    }
-
-                } catch (ex: CancellationException) {
-                    // CancellationException - Upstream Job is being closed, we should quit
-                    LOGGER.trace { "runWebsocketWatcher: startWebsocket was cancelled" }
-                    activeLoop = false
-                } catch (ex: Exception) {
-                    var cancel: Boolean
-
-                    when (ex) {
-                        is ConnectException -> {
-                            LOGGER.debug { "runWebsocketWatcher: Error connecting to $connUri - Invalid Server or Name, or Server is not available" }
-                            cancel = connectionListener.onConnectionError(this, ConnectionError.FailedToConnect, ex)
-                        }
-
-                        is IllegalStateException -> {
-                            LOGGER.warn { "runWebsocketWatcher: Error connecting to $connUri - Illegal State: ${ex.message}" }
-                            cancel = connectionListener.onConnectionError(this, ConnectionError.FailedToConnect, ex)
-                        }
-
-                        else -> {
-                            LOGGER.debug { "runWebsocketWatcher: Connection Error with $connUri" }
-                            cancel = connectionListener.onConnectionError(this, ConnectionError.Unknown, ex)
-                        }
-                    }
-
-
-                    if (cancel) {
-                        // Deactivate loop if told to cancel by onConnectionError
-                        LOGGER.debug { "runWebsocketWatcher: onConnectionError returned true - cancelling connection" }
-                        activeLoop = false
-                    }
-
-                    LOGGER.debug { "runWebsocketWatcher: Error (${errorCount + 1} in a row) - ${ex.stackTraceToString()}" }
-
+                    LOGGER.trace { "runWebsocketWatcher: Launch startWebsocket" }
+                    startWebsocketSession()
                 } finally {
+                    //Make sure we get Close Reason
+                    LOGGER.trace { "runWebsocketWatcher: Waiting for Websocket Close Reason" }
+                    closeReason = webSocketCloseReason?.await()
+                    LOGGER.trace { "runWebsocketWatcher: Websocket Close Reason = $closeReason" }
+                }
 
-                    if (!activeLoop) {
-                        //If loop not ended
-                        when (closeReason?.knownReason) {
-                            CloseReason.Codes.NORMAL, CloseReason.Codes.GOING_AWAY -> {
-                                //Normal Close
-                                LOGGER.debug { "runWebsocketWatcher: startWebsocket was closed normally" }
-                                activeLoop = false
-                            }
+            } catch (ex: CancellationException) {
+                // CancellationException - Upstream Job is being closed, we should quit
+                LOGGER.trace { "runWebsocketWatcher: startWebsocket was cancelled" }
+                connectionActive = false
+            } catch (ex: Exception) {
+                val cancel: Boolean
 
-                            CloseReason.Codes.byCode(1006) -> {
-                                // Closed Abnormally - Happens when Veadotube Mini Closes - we don't seem to get a close frame, or KTOR Hides it and give us this
-                                if (compatibilityFlagMiniPre2dot1) {
-                                    LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube probably closed, but may have crashed" }
-                                } else {
-                                    LOGGER.error { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube may have crashed" }
-                                }
-
-                                //Wait one Instance Manager Loop - If the Instance Closed/Crashed This connection should be cleaned up in around this time
-                                delay(READ_LOOP_DELAY_MAX_MS - WS_CONN_ERROR_WAIT_MS)
-                            }
-
-                            null -> {
-                                LOGGER.debug { "runWebsocketWatcher: Closed Abnormally" }
-                            }
-
-                            else -> {
-                                LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > $closeReason" }
-                            }
-                        }
-
-                        if (activeLoop && ++errorCount >= WS_CONN_ERROR_MAX) {
-                            //Max Retries Reached
-                            LOGGER.warn { "runWebsocketWatcher: Max Reconnect Retries to $connUri reached" }
-                            activeLoop = false
-                            connectionListener.onConnectionError(this, ConnectionError.ExceededRetries)
-                        }
+                when (ex) {
+                    is ConnectException -> {
+                        LOGGER.debug { "runWebsocketWatcher: Error connecting to $connUri - Invalid Server or Name, or Server is not available" }
+                        cancel = connectionListener.onConnectionError(this, ConnectionError.FailedToConnect, ex)
                     }
 
-                    // Wait if Loop is still Active
-                    if (activeLoop) delay(WS_CONN_ERROR_WAIT_MS * errorCount)
+                    is IllegalStateException -> {
+                        LOGGER.warn { "runWebsocketWatcher: Error connecting to $connUri - Illegal State: ${ex.message}" }
+                        cancel = connectionListener.onConnectionError(this, ConnectionError.IllegalState, ex)
+                    }
 
+                    else -> {
+                        LOGGER.debug { "runWebsocketWatcher: Connection Error with $connUri" }
+                        cancel = connectionListener.onConnectionError(this, ConnectionError.Unknown, ex)
+                    }
                 }
-                /* End Websocket Loop Block */
+
+                if (cancel) {
+                    // Deactivate loop if told to cancel by onConnectionError
+                    LOGGER.debug { "runWebsocketWatcher: onConnectionError returned true - cancelling connection" }
+                    connectionActive = false
+                }
+
+            } finally {
+
+                // If connection not told to close or closing gracefully
+                when (closeReason?.knownReason) {
+                    null -> {
+                        LOGGER.debug { "runWebsocketWatcher: Closed Abnormally" }
+                    }
+
+                    CloseReason.Codes.NORMAL, CloseReason.Codes.GOING_AWAY -> {
+                        //Normal Close
+                        LOGGER.debug { "runWebsocketWatcher: startWebsocket was closed normally" }
+                        connectionActive = false
+                    }
+
+                    CloseReason.Codes.byCode(1006) -> {
+                        // Closed Abnormally - Happens when Veadotube Mini Closes - we don't seem to get a close frame, or KTOR Hides it and give us this
+                        if (compatibilityFlagMiniPre2dot1) {
+                            LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube probably closed, but may have crashed" }
+                        } else {
+                            LOGGER.error { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube may have crashed" }
+                        }
+
+                        // Wait one Instance Manager Loop - If the Instance Closed/Crashed This connection should be cleaned up in around this time
+                        delay(READ_LOOP_DELAY_MAX_MS - WS_CONN_ERROR_WAIT_MS)
+
+                        // If connectionActive is still true
+                        if (!connectionActive)
+                            connectionListener.onConnectionError(this, ConnectionError.MiniV2DotOneConnectionError)
+                    }
+
+                    else -> {
+                        LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > $closeReason" }
+                    }
+                }
+
             }
+
+            /* End Websocket Block */
+
 
         } catch (ex: CancellationException) {
             // CancellationException - Upstream Job is being closed, we should quit (Mainly to catch a Cancelled Delay)
@@ -956,7 +938,7 @@ class Connection : AutoCloseable {
 
     private fun cleanupConnection() {
         LOGGER.trace { "cleanupConnection: activeLoop false" }
-        activeLoop = false
+        connectionActive = false
 
         LOGGER.trace { "cleanupConnection: stopWebsocket()" }
         stopWebsocket()
@@ -993,7 +975,7 @@ class Connection : AutoCloseable {
     @Throws(IllegalStateException::class)
     fun send(channel: String = "nodes", requestData: RequestMessage, validateRequest: Boolean = false) {
         check(!isClosed) { "Connection is Closed" }
-        check(activeLoop) { "Connection Websocket not active" }
+        check(connectionActive) { "Connection Websocket not active" }
         check(isConnected) { "Connection Websocket not connected" }
         require(channel.isNotBlank()) { "Channel cannot be blank" }
         check(webSocketSession?.isActive ?: false) { "Connection Websocket Session is not active" }
@@ -1018,7 +1000,7 @@ class Connection : AutoCloseable {
     @Throws(IllegalStateException::class)
     fun send(channel: String = "nodes", requestData: String) {
         check(!isClosed) { "Connection is Closed" }
-        check(activeLoop) { "Connection Websocket not active" }
+        check(connectionActive) { "Connection Websocket not active" }
         check(isConnected) { "Connection Websocket not connected" }
         require(channel.isNotBlank()) { "Channel cannot be blank" }
         check(webSocketSession?.isActive ?: false) { "Connection Websocket Session is not active" }

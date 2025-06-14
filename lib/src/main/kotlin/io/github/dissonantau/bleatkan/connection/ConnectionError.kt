@@ -5,5 +5,6 @@ enum class ConnectionError {
     Unknown,
     InvalidServerOrName,
     FailedToConnect,
-    ExceededRetries
+    IllegalState,
+    MiniV2DotOneConnectionError
 }

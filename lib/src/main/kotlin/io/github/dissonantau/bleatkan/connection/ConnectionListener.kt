@@ -15,7 +15,7 @@ interface ConnectionListener {
      *
      * @return *true* if connection should continue (depending on error it may retry several times) or *false* if it should give up immediately
      *
-     * - [ConnectionError.ExceededRetries] and [ConnectionError.InvalidServerOrName] are always terminal failures, regardless of returning *true* or *false*
+     * - [ConnectionError.MiniV2DotOneConnectionError] and [ConnectionError.InvalidServerOrName] are always terminal failures, regardless of returning *true* or *false*
      * - [ConnectionError.FailedToConnect] may retry again several times unless a *false* is returned
      */
     fun onConnectionError(connection: Connection, error: ConnectionError, exception: Exception? = null): Boolean
