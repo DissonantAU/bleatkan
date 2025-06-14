@@ -34,12 +34,6 @@ import io.github.dissonantau.bleatkan.message.*
 import java.util.Comparator
 
 
-/* //clientsMap not currently used
-import io.github.dissonantau.bleatkan.Client as VtClient
-import java.util.*
-import kotlin.collections.HashMap
-*/
-
 /**
  * Represents a Connection to a Veadotube Instance.
  *
@@ -207,15 +201,6 @@ class Connection : AutoCloseable {
     /** Exception from runWebsocketReceiver (If thrown) */
     private var webSocketReceiverResult: Throwable? = null
 
-
-    /* Start Client Vars
-     Not really implemented here, exists in BleatCan but not used by anything right now
-     */
-
-    //private val clientsMap: HashMap<String, HashSet<VtClient>> = HashMap()
-    //private var clientsActive = false
-
-    /* End Client Vars */
 
     private var connectionActive = false
     var isConnected = false
@@ -706,7 +691,6 @@ class Connection : AutoCloseable {
                 LOGGER.trace { "WebsocketReceiverFlow: Started Receiving Frames from $connUri" }
                 isConnected = true
                 connectionListener.onConnectionChange(connection, true)
-                //updateClients(isConnected) // clientsMap not currently used
             }
             .onCompletion {
                 LOGGER.trace { "WebsocketReceiverFlow: Stopped Receiving Frames from $connUri" }
@@ -921,18 +905,6 @@ class Connection : AutoCloseable {
         } catch (ex: Exception) {
             LOGGER.debug { "passReceivedToListener: Exception passing Message to ConnectionListener - ${ex.message}" }
         }
-
-        // clientsMap Not currently Used
-        /*synchronized(clientsMap) {
-            clientsMap[channel]?.forEach { client ->
-                try {
-                    client.emitReceive(message)
-                } catch (ex: Exception) {
-                    LOGGER.warn { "passReceivedToListener: Exception passing Message to client: ${ex.message}" }
-                }
-            }
-        }*/
-
     }
 
 
@@ -1039,51 +1011,6 @@ class Connection : AutoCloseable {
     override fun toString(): String {
         return "Connection(instance=${instance.id}, id='$id', connectionTimeMillis=$connectionTimeMillis)"
     }
-
-
-    // Method to add or remove clients from channels - clientsMap not current used
-    /*fun setClient(client: VtClient, active: Boolean) {
-        synchronized(clientsMap) {
-            if (active) {
-                // Passed Client to be activated
-                for (channel in client.channels) {
-                    // For each channel in client channel list
-                    // Get the HashSet against the Channel Name. If one doesn't exist, create a new one.
-                    // Add Client to HashSet
-                    clientsMap.getOrDefault(channel, HashSet<VtClient>())
-                        .add(client)
-                }
-                //If clients are set to active, send Connect
-                if (clientsActive) {
-                    client.emitConnect(true)
-                }
-            } else {
-                // Passed Client to be deactivated
-                for (channel in client.channels) {
-                    //Get Set against channel
-                    val set: HashSet<VtClient>? = clientsMap[channel]
-                    if (set != null && set.remove(client) && set.isEmpty()) {
-                        //if Set exists against channel, remove Client from set, and remove Set from Map if empty
-                        clientsMap.remove(channel)
-                    }
-                }
-                //If clients are set to inactive, send Disconnect
-                if (clientsActive) {
-                    client.emitConnect(false)
-                }
-            }
-        }
-    }*/
-
-    // Method to update clients connection status - clientsMap not currently used
-    /*private fun updateClients(isConnected: Boolean) {
-        synchronized(clientsMap) {
-            clientsActive = isConnected
-            clientsMap.values.stream().flatMap { it.stream() }
-                .distinct().forEach { it?.emitConnect(clientsActive) }
-        }
-    }*/
-
 
 }
 
