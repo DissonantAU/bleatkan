@@ -6,5 +6,5 @@ package io.github.dissonantau.bleatkan.instance
  * The value will have been updated in the existing Instance
  */
 enum class InstanceChange {
-    NAME,
+    TITLE,
 }

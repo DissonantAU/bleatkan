@@ -151,135 +151,178 @@ class InstancesManager(
      * Process an Instance file and add to instancesMap
      * @param eventPath Fully Resolved Path of an Instance File
      */
-    private suspend fun processInstanceFileCreateModify(eventPath: Path) = withContext(instanceReaderDispatcher) {
+    private suspend fun processInstanceFileCreateModify(eventPath: Path) {
+        val eventFilename = eventPath.name
+        LOGGER.trace { "processInstanceFile: File Name > $eventPath" }
 
-        try {
-            val eventFilename = eventPath.name
-
-            LOGGER.trace { "processInstanceFile: File Name > $eventPath" }
-
+        val contents = try {
             //Get Contents of file - not bothering with a buffered reader since it's a small file, and we're loading the whole thing
-            val contents = FileReader(eventPath.toFile()).use { it.readText() }
-
-            LOGGER.trace { "processInstanceFile: Done reading $eventFilename - ${contents.length} Chars" }
-
-            try {
-
-                if (contents.isNotBlank() && contents.length > 2) {
-
-                    val veadoInstanceFile = jsonDeserializer.decodeFromString<VeadoInstanceFile>(contents)
-
-                    //Check - make sure values are filled before proceeding
-                    check(veadoInstanceFile.time > 0) { "vtInstance missing timestamp" }
-                    check(veadoInstanceFile.time >= getUnixTime() - READ_TIMEOUT_SEC) { "vtInstance read timeout expired" }
-
-                    check(veadoInstanceFile.name.isNotBlank()) { "vtInstance missing name" }
-                    // Length check to handle bug in mine 2.0a where server can be ":0" when ws server from on to off
-                    check(veadoInstanceFile.server.isNotBlank() && veadoInstanceFile.server.length > 3) { "vtInstance missing server" }
-
-                    LOGGER.trace { "processInstanceFile: $eventFilename Json - $veadoInstanceFile" }
-
-                    //Get Instance ID Object from Map, or Create if new
-                    val instanceID = instancesIDMap.getOrPut(eventFilename) { InstanceID(eventFilename) }
-
-                    LOGGER.trace { "processInstanceFile: instancesMapMutex - Lock Waiting" }
-
-                    instancesMapMutex.withLock {
-                        /* Sync Block Start */
-                        LOGGER.trace { "processInstanceFile: instancesMapMutex - Lock Acquired" }
-
-                        // Check if name is in map - if missing, create new Instance, add Instance ID and add to Map, set newInstance to True
-                        var newInstance = false
-                        val existingInstance: Instance =
-                            instancesMap.getOrPut(instanceID) {
-                                Instance(
-                                    id = instanceID, title = veadoInstanceFile.name, server = veadoInstanceFile.server,
-                                    version = veadoInstanceFile.version
-                                ).also {
-                                    newInstance = true
-                                }
-                            }
-
-                        existingInstance.fileLastModified = veadoInstanceFile.time
-
-                        //Check/Update values
-                        if (!newInstance) {
-                            //Existing instance - compare and update
-                            //Important Value Changed, this should trigger a change event
-                            LOGGER.trace { "processInstanceFile: $eventFilename existing instance - $existingInstance" }
-
-                            when {
-                                existingInstance.server != veadoInstanceFile.server -> {
-                                    // This change would kill an existing connection and should involve a new Instance being created
-                                    LOGGER.trace { "processInstanceFile: server change ${existingInstance.server} -> ${veadoInstanceFile.server} " }
-
-                                    val newInstanceObj =
-                                        Instance(
-                                            id = instanceID,
-                                            name = veadoInstanceFile.name,
-                                            server = veadoInstanceFile.server,
-                                            version = veadoInstanceFile.version,
-                                            lastModified = veadoInstanceFile.time
-                                        )
-                                    instancesMap[instanceID] = newInstanceObj
-
-                                    LOGGER.debug { "processInstanceFile: Existing instance replaced - $existingInstance > $newInstanceObj" }
-
-                                    try {
-                                        instanceEventListener.onInstanceChangeMajor(newInstanceObj, existingInstance)
-                                    } catch (ex: Exception) {
-                                        LOGGER.debug { "processInstanceFile: Failed to call onInstanceChangeMajor for ${existingInstance}/${newInstanceObj}: ${ex.message}; ${ex.stackTraceToString()}" }
-                                    }
-                                }
-
-                                existingInstance.title != veadoInstanceFile.name -> {
-                                    // Name is semi-important, mostly for matching title. Change would not kill an existing connection
-                                    LOGGER.trace { "processInstanceFile: name change ${existingInstance.title} -> ${veadoInstanceFile.name} " }
-
-                                    LOGGER.debug { "processInstanceFile: Existing instance updated - $existingInstance" }
-
-                                    // Update title in existing Instance - we're not sending a new Instance to Listeners
-                                    val oldName = existingInstance.title
-                                    existingInstance.title = veadoInstanceFile.name
-
-                                    try {
-                                        instanceEventListener.onInstanceChangeMinor(
-                                            instance = existingInstance,
-                                            change = InstanceChange.NAME,
-                                            oldValue = oldName
-                                        )
-                                    } catch (ex: Exception) {
-                                        LOGGER.debug { "processInstanceFile: Failed to call onInstanceChangeMinor for ${existingInstance}: ${ex.message}; ${ex.stackTraceToString()}" }
-                                    }
-                                }
-                            }
-
-
-                        } else {
-                            LOGGER.debug { "processInstanceFile: New instance added - $existingInstance" }
-                            try {
-                                instanceEventListener.onInstanceStart(existingInstance)
-                            } catch (ex: Exception) {
-                                LOGGER.debug { "processInstanceFile: Failed to call onInstanceStart for ${existingInstance}: ${ex.message}; ${ex.stackTraceToString()}" }
-                            }
-
-                        }
-
-                    }
-
-                }
-            } catch (ex: SerializationException) {
-                /* Sometimes happens when the file happens to be read when it's still being written */
-                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - $ex" }
-            } catch (ex: IllegalArgumentException) {
-                // Not valid instance of VeadoInstanceFile - could be a newer/non-mini version of Veadotube
-                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - $ex" }
-            } catch (ex: IllegalStateException) {
-                // Missing vtInstance value, etc.
-                LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - $ex" }
+            withContext(instanceReaderDispatcher) {
+                FileReader(eventPath.toFile()).use { it.readText() }
             }
         } catch (ex: IOException) {
             LOGGER.debug { "processInstanceFile: $ex" }
+            return
+        }
+
+        LOGGER.trace { "processInstanceFile: Done reading $eventFilename - ${contents.length} Chars" }
+
+        // If contents are smaller than minimum-viable JSON size, skip decoding
+        if (contents.length <= 5) return
+
+        try {
+            // Decode JSON to Serializable Object
+            val veadoInstanceFile = jsonDeserializer.decodeFromString<VeadoInstanceFile>(contents)
+
+            //Check - make sure values are filled before proceeding
+            check(veadoInstanceFile.updatedTimestamp > 0) { "vtInstance missing timestamp" }
+            check(veadoInstanceFile.updatedTimestamp >= getUnixTime() - READ_TIMEOUT_SEC) { "vtInstance read timeout expired" }
+
+            check(veadoInstanceFile.title.isNotBlank()) { "vtInstance missing name" }
+
+            LOGGER.trace { "processInstanceFile: $eventFilename Json - $veadoInstanceFile" }
+
+            // Get Instance ID Object from Map, or Create if new
+            val instanceID = instancesIDMap.getOrPut(eventFilename) { InstanceID(eventFilename) }
+
+            LOGGER.trace { "processInstanceFile: instancesMapMutex - Lock Waiting" }
+
+            instancesMapMutex.withLock {
+                /* Sync Block Start */
+                LOGGER.trace { "processInstanceFile: instancesMapMutex - Lock Acquired" }
+
+                // Use this instead of [veadoInstanceFile].[server] We need to handle a bug in mini 2.0a where server can be ":0"
+                // when Websocket server is set from on to off. If length is less than 3, it's definitely invalid
+                val veadoInstanceFileServer =
+                    if (veadoInstanceFile.server.length < 3) ""
+                    else veadoInstanceFile.server
+
+                // Check if last Char in Title is a star (*), remove it
+                val veadoInstanceFileTitleLastCharId = veadoInstanceFile.title.length - 1
+                val veadoInstanceFileTitle = if (veadoInstanceFile.title[veadoInstanceFileTitleLastCharId] == '*')
+                    veadoInstanceFile.title.substring(0, veadoInstanceFileTitleLastCharId)
+                else veadoInstanceFile.title
+
+                // Check if name is in map - if missing, create new Instance, add Instance ID and add to Map, set newInstance to True
+                var instanceInMapIsNew = false
+                val instanceInMap: Instance =
+                    instancesMap.getOrPut(instanceID) {
+                        Instance(
+                            id = instanceID, title = veadoInstanceFileTitle, server = veadoInstanceFileServer,
+                            version = veadoInstanceFile.version, language = veadoInstanceFile.language
+                        ).also {
+                            instanceInMapIsNew = true
+                        }
+                    }
+
+                instanceInMap.fileLastModified = veadoInstanceFile.updatedTimestamp
+
+                //Check/Update values
+                if (!instanceInMapIsNew) {
+                    // Existing instance - compare and update
+                    LOGGER.trace { "processInstanceFile: $eventFilename existing instance - $instanceInMap" }
+
+                    when {
+                        instanceInMap.server != veadoInstanceFileServer -> {
+                            // This change would kill an existing connection and should involve a new Instance being created
+                            LOGGER.debug { "processInstanceFile: server change ${instanceInMap.server} -> $veadoInstanceFileServer " }
+
+                            val instanceReplacement =
+                                Instance(
+                                    id = instanceID,
+                                    name = veadoInstanceFileTitle,
+                                    server = veadoInstanceFileServer,
+                                    version = veadoInstanceFile.version,
+                                    lastModified = veadoInstanceFile.updatedTimestamp
+                                )
+
+                            var instanceChanged = false
+
+                            if (veadoInstanceFileServer.isEmpty() && instanceInMap.server.isNotEmpty()) {
+                                // Server was Enabled, now Disabled
+                                try {
+                                    instanceEventListener.onInstanceServerStop(instanceInMap)
+                                    instanceChanged = true
+                                } catch (ex: Exception) {
+                                    LOGGER.debug { "processInstanceFile: Failed to call onInstanceServerStop for ${instanceInMap}/${instanceReplacement}: ${ex.message}; ${ex.stackTraceToString()}" }
+                                }
+                            } else if (veadoInstanceFileServer.isNotEmpty() && instanceInMap.server.isEmpty()) {
+                                // Server was Disabled, now Enabled
+                                try {
+                                    instanceEventListener.onInstanceServerStart(instanceReplacement)
+                                    instanceChanged = true
+                                } catch (ex: Exception) {
+                                    LOGGER.debug { "processInstanceFile: Failed to call onInstanceServerStart for ${instanceInMap}/${instanceReplacement}: ${ex.message}; ${ex.stackTraceToString()}" }
+                                }
+                            } else if (veadoInstanceFileServer.isNotEmpty() && instanceInMap.server.isNotEmpty()) {
+                                // Server was active, still active
+                                try {
+                                    instanceEventListener.onInstanceChangeMajor(instanceReplacement, instanceInMap)
+                                    instanceChanged = true
+                                } catch (ex: Exception) {
+                                    LOGGER.debug { "processInstanceFile: Failed to call onInstanceChangeMajor for ${instanceInMap}/${instanceReplacement}: ${ex.message}; ${ex.stackTraceToString()}" }
+                                }
+                            }
+
+                            if (instanceChanged) {
+                                instancesMap[instanceID] = instanceReplacement
+                                LOGGER.debug { "processInstanceFile: Existing instance replaced - $instanceInMap > $instanceReplacement" }
+                            }
+                        }
+
+                        instanceInMap.title != veadoInstanceFileTitle -> {
+                            // Name is semi-important, mostly for matching title. Change should not kill an existing connection
+                            LOGGER.debug { "processInstanceFile: name change ${instanceInMap.title} -> $veadoInstanceFileTitle" }
+
+                            // Update title in existing Instance - we're not sending a new Instance to Listeners
+                            val oldName = instanceInMap.title
+                            instanceInMap.title = veadoInstanceFileTitle
+                            try {
+                                instanceEventListener.onInstanceChangeMinor(
+                                    instance = instanceInMap,
+                                    change = InstanceChange.TITLE,
+                                    oldValue = oldName
+                                )
+                            } catch (ex: Exception) {
+                                LOGGER.debug { "processInstanceFile: Failed to call onInstanceChangeMinor for ${instanceInMap}: ${ex.message}; ${ex.stackTraceToString()}" }
+                            }
+                        }
+                    }
+
+                } else {
+                    // New instance - set up
+                    LOGGER.debug { "processInstanceFile: New instance added - $instanceInMap" }
+                    try {
+                        instanceEventListener.onInstanceOpen(instanceInMap)
+                    } catch (ex: Exception) {
+                        LOGGER.debug { "processInstanceFile: Failed to call onInstanceOpen for ${instanceInMap}: ${ex.message}; ${ex.stackTraceToString()}" }
+                    }
+
+                    if (veadoInstanceFileServer.isNotEmpty()) {
+                        // Server is Enabled
+                        LOGGER.debug { "processInstanceFile: New instance $instanceInMap has an active file server" }
+                        try {
+                            instanceEventListener.onInstanceServerStart(instanceInMap)
+                        } catch (ex: Exception) {
+                            LOGGER.debug { "processInstanceFile: Failed to call onInstanceServerStart for ${instanceInMap}: ${ex.message}; ${ex.stackTraceToString()}" }
+                        }
+                    }
+                }
+
+            }
+
+        } catch (ex: SerializationException) {
+            /* Sometimes happens when the file happens to be read when it's still being written */
+            LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - ${ex.stackTraceToString()}" }
+        } catch (ex: IllegalArgumentException) {
+            // Not valid instance of VeadoInstanceFile - could be a newer/non-mini version of Veadotube
+            LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - ${ex.stackTraceToString()}" }
+        } catch (ex: IllegalStateException) {
+            // Missing vtInstance value, etc.
+            LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - ${ex.stackTraceToString()}" }
+        } catch (ex: Exception) {
+            // Other Exception
+            LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - ${ex.stackTraceToString()}" }
         }
     }
 
@@ -380,14 +423,16 @@ class InstancesManager(
                     LOGGER.trace { "InstanceChecker: instancesMapMutex - Lock Acquired" }
 
                     if (instancesMap.isNotEmpty()) {
-
-                        val instMapIterator = instancesMap.iterator()
-
                         // Find Instances to Remove and process
+                        val instMapIterator = instancesMap.iterator()
                         for (instanceEntry in instMapIterator) {
                             if (instanceEntry.value.fileLastModified < getUnixTime() - READ_TIMEOUT_SEC) {
-                                //Instance has aged out without file refresh, trigger end and remove from map
-                                instanceEventListener.onInstanceEnd(instanceEntry.value.id)
+                                // Instance has aged out without file timestamp refresh, trigger onInstanceClose and remove from map
+                                try {
+                                    instanceEventListener.onInstanceClose(instanceEntry.value.id)
+                                } catch (ex: Exception) {
+                                    LOGGER.debug { "runInstanceCheckerLoop: Failed to call onInstanceClose for ${instanceEntry}: ${ex.message}; ${ex.stackTraceToString()}" }
+                                }
                                 instMapIterator.remove()
                             }
                         }
@@ -397,10 +442,10 @@ class InstancesManager(
                     /* Sync Block End */
                 }
 
-
                 val loopTimeSeconds = Instant.now().epochSecond - loopStartTime
                 val delayTimeMSec =
                     if (instancesMap.isNotEmpty()) READ_LOOP_DELAY_MAX_MS else READ_LOOP_DELAY_MAX_MS * 2 // If no instances are in the map, double wait time
+
                 LOGGER.trace { "InstanceChecker: Loop took $loopTimeSeconds Seconds, Delaying ${delayTimeMSec / 1000f} Seconds before next check" }
                 delay(delayTimeMSec)
             }
@@ -411,7 +456,7 @@ class InstancesManager(
             //Cleanup
             instancesMapMutex.withLock {
                 for (instance in instancesMap.values) {
-                    instanceEventListener.onInstanceEnd(instance.id)
+                    instanceEventListener.onInstanceClose(instance.id)
                 }
 
                 instancesMap.clear()
@@ -473,7 +518,7 @@ class InstancesManager(
             instancesMapMutex.withLock {
                 LOGGER.trace { "markInstanceFailed: Marking $id as failed" }
                 instancesMap.remove(id)
-                instanceEventListener.onInstanceEnd(id)
+                instanceEventListener.onInstanceClose(id)
             }
         }
 
