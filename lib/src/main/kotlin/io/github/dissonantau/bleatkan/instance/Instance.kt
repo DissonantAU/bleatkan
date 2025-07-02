@@ -45,6 +45,8 @@ data class Instance(
      *
      * In this case the connection may close, or may not fail until next request
      * The instance file will update, but connections may need updating, closing, reopening, etc.
+     *
+     * This value will be updated when the Instance changes
      */
     var title: String,
 
@@ -55,17 +57,22 @@ data class Instance(
      *
      * In this case the connection will likely close, but may not fail until next request.
      * The instance file will update, but connections may need updating, closing, reopening, etc.
+     *
+     * This value will be updated when the Instance changes
      */
-    val server: String,
+    var server: String = "",
 
     /**
      * Instance Version (For example "2.1")
      *
-     * This was added in mini version 2.1 - if none is found, we assume it's v2.0
+     * This was added in mini version 2.1 - if none is found, we assume it's 2.0
      *
      * For Comparable Version, use [instanceVersion]
      */
     val version: String = "2.0",
+
+    /** Added with mini 2.1 */
+    var language: String = "en"
 ) {
 
     /**
@@ -104,14 +111,15 @@ data class Instance(
 
     @JvmOverloads
     constructor(
-        id: InstanceID, name: String, server: String,
-        version: String = "2.0",
+        id: InstanceID, name: String, server: String = "",
+        version: String = "2.0", language: String = "en",
         lastModified: Long
     ) : this(
         id = id,
         title = name,
         server = server,
-        version = version
+        version = version,
+        language = language
     ) {
         fileLastModified = lastModified
     }
