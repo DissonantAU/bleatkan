@@ -524,7 +524,7 @@ class Connection : AutoCloseable {
             try {
 
                 try {
-                    LOGGER.trace { "runWebsocketWatcher: Launch startWebsocket" }
+                    LOGGER.trace { "runWebsocketWatcher: Launch startWebsocketSession" }
                     startWebsocketSession()
                 } finally {
                     //Make sure we get Close Reason
@@ -535,7 +535,7 @@ class Connection : AutoCloseable {
 
             } catch (ex: CancellationException) {
                 // CancellationException - Upstream Job is being closed, we should quit
-                LOGGER.trace { "runWebsocketWatcher: startWebsocket was cancelled" }
+                LOGGER.trace { "runWebsocketWatcher: startWebsocketSession was cancelled" }
                 connectionActive = false
             } catch (ex: Exception) {
                 val cancel: Boolean
