@@ -16,8 +16,11 @@ data class VeadoInstanceFile(
      * - Can be blank if Websocket server is disabled in Instance
      */
     val server: String = "",
-    /** Window Title/Name of Instance */
-    val name: String,
+    /** Window Title/Name of Instance
+     * - Value is called ***name*** in JSON, but is called [title] here for clarity
+     */
+    @SerialName("name")
+    val title: String,
     /** Version of Instance
      * - **Not** Semantic Versioning
      * - Most likely in a format similar to: "2.1a"
@@ -26,10 +29,12 @@ data class VeadoInstanceFile(
      */
     val version: String = "2.0",
     /** Timestamp of when the Instance File was last updated */
-    val time: Long,
+    @SerialName("time")
+    val updatedTimestamp: Long,
     /** Language of Instance
      * - Value was added in veadotube mini 2.1
      * - Defaults to "en" if not found in file
+     * - Value is called ***time*** in JSON, but is called [updatedTimestamp] here for clarity
      */
     val language: String = "en"
 )
