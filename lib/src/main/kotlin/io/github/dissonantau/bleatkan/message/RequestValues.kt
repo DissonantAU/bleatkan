@@ -3,7 +3,7 @@ package io.github.dissonantau.bleatkan.message
 import kotlinx.serialization.SerialName
 
 // Enum for Known Message Events
-enum class MessageEvent(val value: String) {
+enum class MessageEvent(val formattedName: String) {
     UNKNOWN("UNKNOWN"),
     ERROR("ERROR"),
     /* Message is targeting a specific node */
@@ -39,14 +39,14 @@ enum class MessageEvent(val value: String) {
          * @return Enum Constant
          */
         @JvmStatic
-        fun fromValue(value: String): MessageEvent {
-            return entries.find { it.value == value } ?: UNKNOWN
+        fun fromFormattedName(formattedName: String): MessageEvent {
+            return entries.find { it.formattedName == formattedName } ?: UNKNOWN
         }
     }
 }
 
 // Enum for Known Message Types
-enum class MessagePayloadType(val value: String) {
+enum class MessagePayloadType(val formattedName: String) {
     UNKNOWN("UNKNOWN"),
 
     @SerialName("stateEvents")
@@ -61,21 +61,22 @@ enum class MessagePayloadType(val value: String) {
 
     companion object {
         /**
-         * Gets Enum Constant with given Value
+         * Gets Enum Constant with given formatted name.
+         * e.g. 'stateEvents'/'boolean'/'number'
          *
          * Returns UNKNOWN ENUM if not found
          *
          * @return Enum Constant
          */
         @JvmStatic
-        fun fromValue(value: String): MessagePayloadType {
-            return entries.find { it.value == value } ?: UNKNOWN
+        fun fromFormattedName(formattedName: String): MessagePayloadType {
+            return entries.find { it.formattedName == formattedName } ?: UNKNOWN
         }
     }
 }
 
 // Enum for Known Message IDs
-enum class MessagePayloadId(val value: String) {
+enum class MessagePayloadId(val formattedName: String) {
     UNKNOWN("UNKNOWN"),
 
     @SerialName("mini")
@@ -91,14 +92,14 @@ enum class MessagePayloadId(val value: String) {
          * @return Enum Constant
          */
         @JvmStatic
-        fun fromValue(value: String): MessagePayloadId {
-            return entries.find { it.value == value } ?: UNKNOWN
+        fun fromFormattedName(value: String): MessagePayloadId {
+            return entries.find { it.formattedName == value } ?: UNKNOWN
         }
     }
 }
 
 // Enum for Known Payload Events
-enum class PayloadEvent(val value: String) {
+enum class PayloadEvent(val formattedName: String) {
     UNKNOWN("UNKNOWN"),
 
     /* Requesting Values*/
@@ -179,8 +180,8 @@ enum class PayloadEvent(val value: String) {
          * @return Enum Constant
          */
         @JvmStatic
-        fun fromValue(value: String): PayloadEvent {
-            return requireNotNull(entries.find { it.value == value }) { UNKNOWN }
+        fun fromFormattedName(formattedName: String): PayloadEvent {
+            return requireNotNull(entries.find { it.formattedName == formattedName }) { UNKNOWN }
         }
     }
 }
