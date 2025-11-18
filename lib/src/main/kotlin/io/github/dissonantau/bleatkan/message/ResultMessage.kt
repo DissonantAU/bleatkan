@@ -14,8 +14,7 @@ import kotlinx.serialization.json.JsonClassDiscriminator
  *
  * Generic Class - not used directly
  *
- * @see ResultMessageWithEntryList
- * @see ResultMessageWithEntryList
+ * @see ResultMessageWithNodeEntryList
  */
 @Serializable(ResultMessageDeserializer::class)
 //@JsonClassDiscriminator("event")
@@ -81,7 +80,7 @@ sealed class ResultMessage {
      */
     @Serializable
     //@SerialName("list")
-    data class ResultMessageWithEntryList(
+    data class ResultMessageWithNodeEntryList(
         override val event: String,
         val entries: List<Entry>
     ) : ResultMessage()
