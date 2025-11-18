@@ -225,7 +225,7 @@ class Connection : AutoCloseable {
      * @see java.net.URI
      * @see io.github.dissonantau.bleatkan.instance.InstanceID
      */
-    @Throws(IllegalArgumentException::class)
+    @Throws(IllegalArgumentException::class, IllegalStateException::class)
     constructor(
         instance: Instance,
         listener: ConnectionListener, connectionName: String = "bleatkan-${instance.id}",
@@ -245,7 +245,7 @@ class Connection : AutoCloseable {
         //Get URI
         try {
             connUri = instance.getWebSocketUri(this.name)
-        } catch (ex: IllegalArgumentException) {
+        } catch (ex: RuntimeException) {
             listener.onConnectionError(this, ConnectionError.InvalidServerOrName, ex)
             throw ex
         }
@@ -309,7 +309,7 @@ class Connection : AutoCloseable {
      * @see java.net.URI
      * @see io.github.dissonantau.bleatkan.instance.InstanceID
      */
-    @Throws(IllegalArgumentException::class)
+    @Throws(IllegalArgumentException::class, IllegalStateException::class)
     constructor(
         instance: Instance,
         listener: ConnectionListener,
@@ -336,7 +336,7 @@ class Connection : AutoCloseable {
      * @see java.net.URI
      * @see io.github.dissonantau.bleatkan.instance.InstanceID
      */
-    @Throws(IllegalArgumentException::class)
+    @Throws(IllegalArgumentException::class, IllegalStateException::class)
     @TestOnly
     @VisibleForUnitTests
     internal constructor(
@@ -363,7 +363,7 @@ class Connection : AutoCloseable {
         //Get URI
         try {
             connUri = instance.getWebSocketUri(this.name)
-        } catch (ex: IllegalArgumentException) {
+        } catch (ex: RuntimeException) {
             listener.onConnectionError(this, ConnectionError.InvalidServerOrName, ex)
             throw ex
         }

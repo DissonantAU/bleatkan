@@ -7,6 +7,7 @@ import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Comparator
+import kotlin.jvm.Throws
 
 
 /**
@@ -105,7 +106,7 @@ data class Instance(
 
     init {
         require(id.type.isNotEmpty()) { "InstanceID is not Valid" }
-        require(server.isNotBlank()) { "serverAddress is blank" }
+        //require(server.isNotBlank()) { "serverAddress is blank" } // Instance server might be blank temporarily
         require(title.isNotBlank()) { "instanceName is blank" }
     }
 
@@ -131,8 +132,11 @@ data class Instance(
      *
      * @return URI for Instance with the default connection name attached. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=bleatkan-123456789")
      */
-    fun getWebSocketUri(): URI =
-        getWebSocketUri(server, "bleatkan-$id-${System.currentTimeMillis()}")
+    @Throws(IllegalStateException::class)
+    fun getWebSocketUri(): URI {
+        check(server.isNotBlank()) { "Server can not be blank" }
+        return generateWebSocketUri(server, "bleatkan-$id-${System.currentTimeMillis()}")
+    }
 
 
     /**
@@ -141,8 +145,12 @@ data class Instance(
      * @param connectionName Name of Connection - this will appear in the Veadotube Logs (e.g. "api ab1234" > "?n=api%20ab1234")
      * @return URI for Instance & Client. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=connection%20name")
      */
-    fun getWebSocketUri(connectionName: String): URI =
-        getWebSocketUri(server, connectionName)
+    @Throws(IllegalArgumentException::class, IllegalStateException::class)
+    fun getWebSocketUri(connectionName: String): URI {
+        check(server.isNotBlank()) { "Server can not be blank" }
+        require(connectionName.isNotBlank()) { "Name can not be blank" }
+        return generateWebSocketUri(server, connectionName)
+    }
 
 
     /**
@@ -164,6 +172,7 @@ data class Instance(
     companion object {
         /**
          * Returns the URI for the given Client Name on this Instance
+         *
          * This is one-to-one for Veadotube Mini
          *
          * @param server Server IP and Port separated with a colon (e.g. "127.0.0.1:12345")
@@ -171,13 +180,27 @@ data class Instance(
          * @return URI for Instance & Client. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=connection%20name")
          */
         @JvmStatic
+        @Throws(IllegalArgumentException::class)
         fun getWebSocketUri(server: String, connectionName: String): URI {
-            require(server.isNotBlank()) { "Server can not be empty or blank" }
-            require(connectionName.isNotBlank()) { "Name can not be empty or blank" }
+            require(server.isNotBlank()) { "Server can not be blank" }
+            require(connectionName.isNotBlank()) { "Name can not be blank" }
 
+            return generateWebSocketUri(server, connectionName)
+        }
+
+        /**
+         * Generates and Returns the URI for the given Client Name on this Instance
+         *
+         * Internal with no checks on inputs - make sure server & connectionName are not blank
+         *
+         * @param server Server IP and Port separated with a colon (e.g. "127.0.0.1:12345")
+         * @param connectionName Name of Connection - this will appear in the Veadotube Logs (e.g. "api ab1234" > "?n=api%20ab1234")
+         * @return URI for Instance & Client. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=connection%20name")
+         */
+        @Throws(IllegalArgumentException::class)
+        private fun generateWebSocketUri(server: String, connectionName: String): URI {
             val encodedName = URLEncoder.encode(connectionName, StandardCharsets.UTF_8.toString())
             return URI("ws://$server?n=$encodedName")
-
         }
 
         val COMPARATOR_INSTANCE_BY_ID: Comparator<Instance> = compareBy { it.id.timestamp }
