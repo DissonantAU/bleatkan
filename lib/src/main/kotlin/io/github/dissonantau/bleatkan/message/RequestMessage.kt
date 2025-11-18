@@ -28,6 +28,7 @@ sealed class RequestMessage {
 
     @Serializable
     data class RequestMessageNodeEvent(
+
         override val event: String,
         /**
          * Node Type to send the request to
@@ -46,7 +47,15 @@ sealed class RequestMessage {
          * Payload to send to node [type] / [id]
          */
         val payload: RequestPayload
-    ) : RequestMessage()
+    ) : RequestMessage() {
+        constructor(
+            event: MessageEvent, type: MessagePayloadType,
+            id: String, payload: RequestPayload
+        ) : this(
+            event = event.formattedName, type = type.formattedName,
+            id = id, payload = payload
+        )
+    }
 
 
     /**
@@ -121,7 +130,9 @@ sealed class RequestPayload {
     @Serializable
     class RequestPayloadEvent(
         override val event: String
-    ) : RequestPayload()
+    ) : RequestPayload() {
+        constructor(event: PayloadEvent) : this(event.formattedName)
+    }
 
     /**
      * Used for Request Payloads that need a token, usually Listeners
@@ -142,7 +153,9 @@ sealed class RequestPayload {
          * Token sent for UnListen must be the same as original Listen Request
          */
         val token: String
-    ) : RequestPayload()
+    ) : RequestPayload() {
+        constructor(event: PayloadEvent, token: String) : this(event.formattedName, token)
+    }
 
     /**
      * Used for Request Payloads that need a State String, e.g. Set/Push/Pop/Thumb
@@ -164,7 +177,9 @@ sealed class RequestPayload {
          * i.e. the state id from a [MessageEvent.PAYLOAD] / [MessagePayloadType.STATE_EVENTS] / [PayloadEvent.LIST] request
          */
         val state: String
-    ) : RequestPayload()
+    ) : RequestPayload() {
+        constructor(event: PayloadEvent, state: String) : this(event.formattedName, state)
+    }
 
     /**
      * Used for Request Payloads that need a Boolean Value
@@ -185,8 +200,9 @@ sealed class RequestPayload {
          * i.e. the state id from a [MessageEvent.PAYLOAD] / [MessagePayloadType.STATE_EVENTS] / [PayloadEvent.LIST] request
          */
         val value: Boolean
-    ) : RequestPayload()
-
+    ) : RequestPayload() {
+        constructor(event: PayloadEvent, value: Boolean) : this(event.formattedName, value)
+    }
 
     /**
      * Used for Request Payloads that needs a String Value
@@ -206,7 +222,9 @@ sealed class RequestPayload {
          * String for event. e.g. "toggle" or "clear"
          */
         val value: String
-    ) : RequestPayload()
+    ) : RequestPayload() {
+        constructor(event: PayloadEvent, value: String) : this(event.formattedName, value)
+    }
 
     /**
      * Used for Request Payloads that need a Value Number
@@ -223,7 +241,9 @@ sealed class RequestPayload {
     data class RequestPayloadEventValueNumber(
         override val event: String,
         val value: Double
-    ) : RequestPayload()
+    ) : RequestPayload() {
+        constructor(event: PayloadEvent, value: Double) : this(event.formattedName, value)
+    }
 
     /**
      * Used for Request Payloads that need a number and min/max values
@@ -240,7 +260,10 @@ sealed class RequestPayload {
     data class RequestPayloadEventValueNumberMinMax(
         override val event: String,
         val value: RequestPayloadEventNumberValueMulti
-    ) : RequestPayload()
+    ) : RequestPayload() {
+        constructor(event: PayloadEvent, value: RequestPayloadEventNumberValueMulti)
+                : this(event.formattedName, value)
+    }
 
     /**
      * Encodes Request Payload as JSON String
