@@ -835,7 +835,7 @@ class VeadoRequest {
                                 errorSb.append { "type (${requestData.type});" }
                             }
 
-                            if (MessagePayloadId.fromValue(requestData.id) != MessagePayloadId.MINI) {
+                            if (requestData.id.isBlank()) {
                                 valid = false
                                 errorSb.append { "id (${requestData.id});" }
                             }
