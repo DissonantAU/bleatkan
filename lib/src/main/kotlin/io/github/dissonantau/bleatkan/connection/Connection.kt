@@ -374,10 +374,10 @@ class Connection : AutoCloseable {
         id = connUri.toString()
 
         // Compatibility flags
-        if (instance.version == "2.0") {
+        if (instance.id.type == "mini" && instance.version == "2.0") {
             //Compatibility flag for pre 2.1
             compatibilityFlagMiniPre2dot1 = true
-            LOGGER.debug { "API Compatibility Flag set: Version 2" }
+            LOGGER.debug { "API Compatibility Flag set: Mini Version 2" }
         }
 
         //setupHttpClient() // Testing - Skipped
@@ -580,9 +580,9 @@ class Connection : AutoCloseable {
                     CloseReason.Codes.byCode(1006) -> {
                         // Closed Abnormally - Happens when Veadotube Mini Closes - we don't seem to get a close frame, or KTOR Hides it and give us this
                         if (compatibilityFlagMiniPre2dot1) {
-                            LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube probably closed, but may have crashed" }
+                            LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - veadotube mini probably closed, but may have crashed" }
                         } else {
-                            LOGGER.error { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - Veadotube may have crashed" }
+                            LOGGER.error { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - veadotube may have crashed" }
                         }
 
                         // Wait one Instance Manager Loop - If the Instance Closed/Crashed This connection should be cleaned up in around this time
@@ -979,7 +979,7 @@ class Connection : AutoCloseable {
 
         runBlocking {
             //Convert to String with Channel Prefix and Send
-            val dataAsString = "$channel:${requestData}"
+            val dataAsString = "${channel}:${requestData}"
             LOGGER.trace { "Sending message: '$dataAsString'" }
             webSocketSession?.send(Frame.Text(dataAsString))
         }
