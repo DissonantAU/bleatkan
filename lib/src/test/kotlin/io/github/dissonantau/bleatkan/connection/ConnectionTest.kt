@@ -85,10 +85,10 @@ class ConnectionTest {
         lastReceive.let { (_, resultMessage) ->
             println("Testing: $testName")
 
-            assert(resultMessage is ResultMessage.ResultMessageWithEntryList)
+            assert(resultMessage is ResultMessage.ResultMessageWithNodeEntryList)
 
             assert(resultMessage.event == "list")
-            resultMessage as ResultMessage.ResultMessageWithEntryList
+            resultMessage as ResultMessage.ResultMessageWithNodeEntryList
 
             for (entry in resultMessage.entries) {
                 when (entry.name) {

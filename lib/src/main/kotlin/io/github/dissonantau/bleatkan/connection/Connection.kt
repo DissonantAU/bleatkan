@@ -27,9 +27,6 @@ import kotlinx.serialization.json.*
 import io.github.dissonantau.bleatkan.instance.Instance
 import io.github.dissonantau.bleatkan.instance.InstanceID
 import io.github.dissonantau.bleatkan.instance.InstancesManager.Companion.READ_LOOP_DELAY_MAX_MS
-import io.github.dissonantau.bleatkan.message.RequestMessage
-import io.github.dissonantau.bleatkan.message.ResultMessage
-import io.github.dissonantau.bleatkan.message.ResultPayload
 import io.github.dissonantau.bleatkan.message.*
 import java.util.Comparator
 
@@ -864,7 +861,7 @@ class Connection : AutoCloseable {
         if (LOGGER.isTraceEnabled()) {
             // Trace is Enabled, process block to output info (Skip if not)
             LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Event: " + convertedMessage.event }
-            if (convertedMessage is ResultMessage.ResultMessageWithEntryList) {
+            if (convertedMessage is ResultMessage.ResultMessageWithNodeEntryList) {
                 LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessageEntries" }
                 LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries: ${convertedMessage.entries}" }
                 for (entry in convertedMessage.entries) {

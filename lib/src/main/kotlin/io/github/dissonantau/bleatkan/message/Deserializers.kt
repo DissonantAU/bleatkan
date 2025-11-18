@@ -78,7 +78,7 @@ object ResultMessageDeserializer : JsonContentPolymorphicSerializer<ResultMessag
                 }
             }
 
-            "list" -> ResultMessage.ResultMessageWithEntryList.serializer()
+            "list" -> ResultMessage.ResultMessageWithNodeEntryList.serializer()
             "info" -> ResultMessage.ResultMessageWithInstanceInfo.serializer()
 
             else -> throw IllegalArgumentException("Unsupported Payload type")
