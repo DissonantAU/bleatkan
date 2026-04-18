@@ -19,7 +19,10 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 @Serializable(ResultMessageDeserializer::class)
 //@JsonClassDiscriminator("event")
 sealed class ResultMessage {
-    //e.g. Current State, List of States, State Thumbnail
+    /** Request Contents e.g. Payload
+     *
+     * @see [MessageEvent]
+     */
     abstract val event: String
 
     /**
@@ -248,16 +251,24 @@ sealed class ResultPayload {
 /**
  * Payload with Number Value/Min/Max
  *
- * Values are null if they weren't defined in the payload
+ * If Min/Max weren't defined in the payload:
+ * - min = [Double.NEGATIVE_INFINITY]
+ * - max = [Double.POSITIVE_INFINITY]
  *
  * More Info https://veado.tube/docs/tech/api/nodes/#number
  */
 @Serializable
 data class ResultPayloadSpecialNumber(
     val value: Double,
-    val min: Double? = null,
-    val max: Double? = null
-)
+    val min: Double = Double.NEGATIVE_INFINITY,
+    val max: Double = Double.POSITIVE_INFINITY
+) {
+    val isMinSet
+        get() = min.isFinite()
+
+    val isMaxSet
+        get() = max.isFinite()
+}
 
 
 @Serializable

@@ -1,17 +1,25 @@
 package io.github.dissonantau.bleatkan.instance
 
+import kotlin.jvm.Throws
+
 
 interface InstancesListener {
     /**
      * Instance Manager Event - New Instance Opened & Detected
      *
      * Instance may not have an active Websocket Server, [onInstanceServerStart] is called when the Websocket Server is detected
+     *
+     * @throws IllegalArgumentException if [Instance.id.type][io.github.dissonantau.bleatkan.instance.InstanceID.type] not recognised - Should be 'mini' or 'veado'
      */
+    @Throws(IllegalArgumentException::class)
     fun onInstanceOpen(instance: Instance)
 
     /**
      * Instance Manager Event - Instance Websocket Server Started
+     *
+     * @throws IllegalArgumentException if [Instance.id.type][io.github.dissonantau.bleatkan.instance.InstanceID.type] not recognised - Should be 'mini' or 'veado'
      */
+    @Throws(IllegalArgumentException::class)
     fun onInstanceServerStart(instance: Instance)
 
     /**
