@@ -199,20 +199,20 @@ class InstancesManager(
 
                 // Check if last Char in Title is a star (*), remove it
                 val veadoInstanceFileTitleLastCharId = veadoInstanceFile.title.length - 1
-                val veadoInstanceFileTitle = if (veadoInstanceFile.title[veadoInstanceFileTitleLastCharId] == '*')
-                    veadoInstanceFile.title.substring(0, veadoInstanceFileTitleLastCharId)
-                else veadoInstanceFile.title
+                val veadoInstanceFileTitle =
+                    if (veadoInstanceFile.title[veadoInstanceFileTitleLastCharId] == '*')
+                        veadoInstanceFile.title.substring(0, veadoInstanceFileTitleLastCharId)
+                    else veadoInstanceFile.title
 
                 // Check if name is in map - if missing, create new Instance, add Instance ID and add to Map, set newInstance to True
                 var instanceInMapIsNew = false
                 val instanceInMap: Instance =
                     instancesMap.getOrPut(instanceID) {
+                        instanceInMapIsNew = true
                         Instance(
                             id = instanceID, title = veadoInstanceFileTitle, server = veadoInstanceFileServer,
                             version = veadoInstanceFile.version, language = veadoInstanceFile.language
-                        ).also {
-                            instanceInMapIsNew = true
-                        }
+                        )
                     }
 
                 instanceInMap.fileLastModified = veadoInstanceFile.updatedTimestamp
@@ -324,6 +324,58 @@ class InstancesManager(
             // Other Exception
             LOGGER.debug { "processInstanceFile: $eventFilename content - $contents - ${ex.stackTraceToString()}" }
         }
+    }
+
+
+    /**
+     * Notify Manager that an Instance has updated it's Title
+     * @param instance Instance that updated it's Title
+     */
+    fun notifyUpdateInstanceTitle(instance: Instance, newTitle: String) {
+        LOGGER.trace { "notifyUpdateInstanceTitle: instance (${instance.id} updated title '${instance.title}' > '$newTitle'" }
+        require(newTitle.isNotBlank())
+
+        runBlocking(instanceReaderDispatcher) {
+            LOGGER.trace { "notifyUpdateInstanceTitle: instancesMapMutex - Lock Waiting" }
+
+            instancesMapMutex.withLock {
+                /* Sync Block Start */
+                LOGGER.trace { "notifyUpdateInstanceTitle: instancesMapMutex - Lock Acquired" }
+
+                // Check if name is in map - if missing we'll return
+                val instanceInMap: Instance = instancesMap[instance.id]
+                    ?: throw IllegalStateException("Instance ${instance.id} missing from Instance Map")
+
+                // Check if last Char in Title is a star (*), remove it
+                val instanceTitleLastCharId = newTitle.length - 1
+                val instanceTitle =
+                    if (newTitle[instanceTitleLastCharId] == '*')
+                        newTitle.substring(0, instanceTitleLastCharId)
+                    else newTitle
+
+                val time = System.currentTimeMillis() / 1000
+                LOGGER.trace { "notifyUpdateInstanceTitle: file last modified time: ${instanceInMap.fileLastModified}; current: $time (+${time - instanceInMap.fileLastModified})" }
+                instanceInMap.fileLastModified = time
+
+                // Check title and update if different
+                if (instanceInMap.title != instanceTitle) {
+                    // Name is semi-important, mostly for matching title. Change should not kill an existing connection
+                    LOGGER.debug { "notifyUpdateInstanceTitle: name change ${instanceInMap.title} -> $instanceTitle" }
+
+                    // Update title in existing Instance - we're not sending a new Instance to Listeners
+                    val oldName = instanceInMap.title
+                    instanceInMap.title = instanceTitle
+
+                    instanceEventListener.onInstanceChangeMinor(
+                        instance = instanceInMap,
+                        change = InstanceChange.TITLE,
+                        oldValue = oldName
+                    )
+
+                }
+            }
+        }
+
     }
 
 

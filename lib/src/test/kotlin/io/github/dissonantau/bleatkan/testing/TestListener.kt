@@ -53,6 +53,14 @@ class TestListener : InstancesListener, ConnectionListener {
         logger.debug { "TestReceiver: onInstanceChangeMajor > instance: ${instance}, change: $change, oldValue: $oldValue" }
     }
 
+    override fun onInstanceOpen(instance: Instance) {
+        logger.debug { "TestReceiver: onInstanceOpen > instance: $instance" }
+    }
+
+    override fun onInstanceServerStop(instance: Instance) {
+        logger.debug { "TestReceiver: onInstanceServerStop > instance: $instance" }
+    }
+
     override fun onInstanceClose(id: InstanceID) {
         logger.debug { "TestReceiver: onInstanceClose '${id}'" }
         val closingInstance = instanceMap.remove(id)

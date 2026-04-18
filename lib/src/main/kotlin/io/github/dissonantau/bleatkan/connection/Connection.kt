@@ -8,9 +8,7 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.websocket.*
-import java.net.ConnectException
 import java.net.*
-import java.net.URI
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
@@ -28,8 +26,6 @@ import io.github.dissonantau.bleatkan.instance.Instance
 import io.github.dissonantau.bleatkan.instance.InstanceID
 import io.github.dissonantau.bleatkan.instance.InstancesManager.Companion.READ_LOOP_DELAY_MAX_MS
 import io.github.dissonantau.bleatkan.message.*
-import java.util.Comparator
-
 
 /**
  * Represents a Connection to a Veadotube Instance.

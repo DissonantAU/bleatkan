@@ -31,12 +31,13 @@ class ConnectionTest {
 
             assert(conn.server == dummyInstance.server) { "Connection Server doesn't Match Dummy Instance Value" }
 
+            val instGetWebSocketURI = Instance.getWebSocketUri(
+                dummyInstance.server,
+                "$connectionName-${conn.connectionTimeMillis}"
+            )
             assert(
-                conn.connUri == Instance.getWebSocketUri(
-                    dummyInstance.server,
-                    "testConnectionName"
-                )
-            ) { "Connection URI doesn't expected Instance" }
+                conn.connUri == instGetWebSocketURI
+            ) { "Connection URI doesn't match Instance.getWebSocketUri (${conn.connUri} vs $instGetWebSocketURI)" }
         }
     }
 
@@ -364,6 +365,9 @@ class ConnectionTest {
         var conn: Connection? = null
 
         @JvmStatic
+        var connectionName = "testConnectionName"
+
+        @JvmStatic
         var mockWebSocketSession: WebSocketSession? = null
 
         @JvmStatic
@@ -394,7 +398,7 @@ class ConnectionTest {
                     listener = connectionListener,
                     testFrameChannel = frameReceive,
                     mockWebSocketSession = mockWebSocketSession,
-                    connectionName = "testConnectionName"
+                    connectionName = connectionName
 
                 )
             }

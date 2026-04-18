@@ -169,6 +169,26 @@ data class Instance(
         return Connection(instance = this, listener = listener, connectionName = connectionName)
     }
 
+    /**
+     * Gets the Title with the Application Title (up to first dash) and any Whitespace Trimmed off
+     *
+     * Examples:
+     * - "veadotube mini" = "" (Blank String)
+     * - "veadotube mini - main" = "main"
+     *
+     * @param alternateResult [String] to return if there's nothing other than the default application title. Blank String by default
+     * @return [String] Trimmed Title - or [alternateResult]
+     */
+    @JvmOverloads
+    inline fun getTitleTrimmed(alternateResult: () -> String = { "" }): String {
+        val firstDash = title.indexOf('-')
+        return if (firstDash >= 0) {
+            title.substring(firstDash + 1).trim()
+        } else {
+            alternateResult()
+        }
+    }
+
     companion object {
         /**
          * Returns the URI for the given Client Name on this Instance
