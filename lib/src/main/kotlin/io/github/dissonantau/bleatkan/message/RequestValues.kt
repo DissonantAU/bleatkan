@@ -107,7 +107,7 @@ enum class PayloadEvent(val formattedName: String) {
     @SerialName("list")
     LIST("list"),
 
-    /** Requests current Single Value of a stack (e.g State) */
+    /** Requests current Single Value of a stack (e.g. State) */
     @SerialName("peek")
     PEEK("peek"),
 

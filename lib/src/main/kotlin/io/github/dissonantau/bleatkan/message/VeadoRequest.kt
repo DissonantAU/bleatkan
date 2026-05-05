@@ -23,49 +23,41 @@ class VeadoRequest {
         val getEventInfo: RequestMessage =
             RequestMessageInstanceInfo(event = MessageEvent.INFO.formattedName)
 
-
         /** Request of *event: list* - For getting a List of Nodes from Nodes Channel */
         @JvmStatic
         val getEventList: RequestMessage =
             RequestMessageNodeList(event = MessageEvent.LIST.formattedName)
-
 
         /** Request Payload of *event: list* - For getting a List of States in a Node */
         @JvmStatic
         val getPayloadEventList: RequestPayload =
             RequestPayloadEvent(event = PayloadEvent.LIST.formattedName)
 
-
         /** Request Payload of *event: peek* */
         @JvmStatic
         val getPayloadEventPeek: RequestPayload =
             RequestPayloadEvent(event = PayloadEvent.PEEK.formattedName)
-
 
         /** Request Payload of *event: get* */
         @JvmStatic
         val getPayloadEventGet: RequestPayload =
             RequestPayloadEvent(event = PayloadEvent.GET.formattedName)
 
-
         /** Request Payload of *event: set* */
         @JvmStatic
         val getPayloadEventSet: RequestPayload =
             RequestPayloadEvent(event = PayloadEvent.SET.formattedName)
-
 
         /** Request Payload of *event: clear* */
         @JvmStatic
         val getPayloadEventClear: RequestPayload =
             RequestPayloadEvent(event = PayloadEvent.CLEAR.formattedName)
 
-
         /** Common Prebuilt Request to get Avatar State List from Veadotube Mini
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].formattedName,
          *  payload = [getPayloadEventList]
          * )
@@ -82,8 +74,7 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].formattedName,
          *  payload = [getPayloadEventPeek]
          * )
@@ -103,31 +94,19 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].formattedName,
-         *  payload = createPayload(
-         *   event = [PayloadEvent],
-         *   value = [stateID]
-         *  )
+         *  payload = createPayload( event = [PayloadEvent], value = [stateID] )
          * )
          *
          * @see createRequest
          * @see createPayload
-         *
          */
         @JvmStatic
-        fun createChangeStateMini(
-            action: PayloadEvent,
-            stateID: String
-        ) = createRequest(
-            event = MessageEvent.PAYLOAD,
-            type = MessagePayloadType.STATE_EVENTS,
+        fun createChangeStateMini(action: PayloadEvent, stateID: String) = createRequest(
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI.formattedName,
-            payload = createPayload(
-                event = action,
-                value = stateID
-            )
+            payload = createPayload(event = action, value = stateID)
         )
 
         /**
@@ -137,13 +116,9 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].formattedName,
-         *  payload = createPayload(
-         *   event = [PayloadEvent.SET],
-         *   value = [stateID]
-         *  )
+         *  payload = createPayload( event = [PayloadEvent.SET], value = [stateID] )
          * )
          *
          * @see createRequest
@@ -151,16 +126,10 @@ class VeadoRequest {
          *
          */
         @JvmStatic
-        fun createSetStateMini(
-            stateID: String
-        ) = createRequest(
-            event = MessageEvent.PAYLOAD,
-            type = MessagePayloadType.STATE_EVENTS,
+        fun createSetStateMini(stateID: String) = createRequest(
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI.formattedName,
-            payload = createPayload(
-                event = PayloadEvent.SET,
-                value = stateID
-            )
+            payload = createPayload(event = PayloadEvent.SET, value = stateID)
         )
 
         /**
@@ -170,13 +139,9 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].formattedName,
-         *  payload = createPayload(
-         *   event = [PayloadEvent.PUSH],
-         *   value = [stateID]
-         *  )
+         *  payload = createPayload( event = [PayloadEvent.PUSH], value = [stateID] )
          * )
          *
          * @see createRequest
@@ -184,16 +149,10 @@ class VeadoRequest {
          *
          */
         @JvmStatic
-        fun createPushStateMini(
-            stateID: String
-        ) = createRequest(
-            event = MessageEvent.PAYLOAD,
-            type = MessagePayloadType.STATE_EVENTS,
+        fun createPushStateMini(stateID: String) = createRequest(
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI.formattedName,
-            payload = createPayload(
-                event = PayloadEvent.PUSH,
-                value = stateID
-            )
+            payload = createPayload(event = PayloadEvent.PUSH, value = stateID)
         )
 
         /**
@@ -203,32 +162,20 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].value,
-         *  payload = createPayload(
-         *   event = [PayloadEvent.POP],
-         *   value = [stateID]
-         *  )
+         *  payload = createPayload( event = [PayloadEvent.POP], value = [stateID] )
          * )
          *
          * @see createRequest
          * @see createPayload
-         *
          */
         @JvmStatic
-        fun createPopStateMini(
-            stateID: String
-        ) = createRequest(
-            event = MessageEvent.PAYLOAD,
-            type = MessagePayloadType.STATE_EVENTS,
+        fun createPopStateMini(stateID: String) = createRequest(
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI.formattedName,
-            payload = createPayload(
-                event = PayloadEvent.POP,
-                value = stateID
-            )
+            payload = createPayload(event = PayloadEvent.POP, value = stateID)
         )
-
 
         /**
          * Returns a Request [RequestMessage] with a Toggle State Payload [RequestPayload]
@@ -237,32 +184,20 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].value,
-         *  payload = createPayload(
-         *   event = [PayloadEvent.TOGGLE],
-         *   value = [stateID]
-         *  )
+         *  payload = createPayload( event = [PayloadEvent.TOGGLE], value = [stateID] )
          * )
          *
          * @see createRequest
          * @see createPayload
-         *
          */
         @JvmStatic
-        fun createToggleStateMini(
-            stateID: String
-        ) = createRequest(
-            event = MessageEvent.PAYLOAD,
-            type = MessagePayloadType.STATE_EVENTS,
+        fun createToggleStateMini(stateID: String) = createRequest(
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI.formattedName,
-            payload = createPayload(
-                event = PayloadEvent.TOGGLE,
-                value = stateID
-            )
+            payload = createPayload(event = PayloadEvent.TOGGLE, value = stateID)
         )
-
 
         /**
          * Returns a Request [RequestMessage] with a Clear State Payload [RequestPayload]
@@ -271,28 +206,20 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].value,
-         *  payload = createPayload(
-         *   event = [PayloadEvent.CLEAR]
-         *  )
+         *  payload = createPayload( event = [PayloadEvent.CLEAR] )
          * )
          *
          * @see createRequest
          * @see createPayload
-         *
          */
         @JvmStatic
         fun createClearStateMini() = createRequest(
-            event = MessageEvent.PAYLOAD,
-            type = MessagePayloadType.STATE_EVENTS,
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI.formattedName,
-            payload = createPayload(
-                event = PayloadEvent.CLEAR
-            )
+            payload = createPayload(event = PayloadEvent.CLEAR)
         )
-
 
         /**
          * Returns a Request [RequestMessage] with a Listen State Payload [RequestPayload]
@@ -301,32 +228,21 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].value,
-         *  payload = createPayload(
-         *   event = [PayloadEvent.LISTEN],
-         *   value = [stateID]
-         *  )
+         *  payload = createPayload( event = [PayloadEvent.LISTEN], value = [stateID] )
          * )
          *
          * @param stateID Avatar State ID
          *
          * @see createRequest
          * @see createPayload
-         *
          */
         @JvmStatic
-        fun createListenStateMini(
-            stateID: String
-        ) = createRequest(
-            event = MessageEvent.PAYLOAD,
-            type = MessagePayloadType.STATE_EVENTS,
+        fun createListenStateMini(stateID: String) = createRequest(
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI.formattedName,
-            payload = createPayload(
-                event = PayloadEvent.LISTEN,
-                value = stateID
-            )
+            payload = createPayload(event = PayloadEvent.LISTEN, value = stateID)
         )
 
         /**
@@ -336,34 +252,22 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].value,
-         *  payload = createPayload(
-         *   event = [PayloadEvent.UNLISTEN],
-         *   value = [stateID]
-         *  )
+         *  payload = createPayload( event = [PayloadEvent.UNLISTEN], value = [stateID] )
          * )
          *
          * @param stateID Avatar State ID
          *
          * @see createRequest
          * @see createPayload
-         *
          */
         @JvmStatic
-        fun createUnlistenStateMini(
-            stateID: String
-        ) = createRequest(
-            event = MessageEvent.PAYLOAD,
-            type = MessagePayloadType.STATE_EVENTS,
+        fun createUnlistenStateMini(stateID: String) = createRequest(
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI.formattedName,
-            payload = createPayload(
-                event = PayloadEvent.UNLISTEN,
-                value = stateID
-            )
+            payload = createPayload(event = PayloadEvent.UNLISTEN, value = stateID)
         )
-
 
         /**
          * Returns a Request [RequestMessage] with a Thumbnail State Payload [RequestPayload]
@@ -372,30 +276,21 @@ class VeadoRequest {
          *
          * Equivalent of
          * createRequest(
-         *  event = [MessageEvent.PAYLOAD],
-         *  type = [MessagePayloadType.STATE_EVENTS],
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
          *  id = [MessagePayloadId.MINI].value,
-         *  payload = createPayload(
-         *   event = [PayloadEvent.THUMB],
-         *   value = [stateID]
-         *  )
+         *  payload = createPayload( event = [PayloadEvent.THUMB], value = [stateID] )
          * )
          *
          * @see createRequest
          * @see createPayload
-         *
          */
         @JvmStatic
         fun createThumbnailStateMini(
             stateID: String
         ) = createRequest(
-            event = MessageEvent.PAYLOAD,
-            type = MessagePayloadType.STATE_EVENTS,
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.STATE_EVENTS,
             id = MessagePayloadId.MINI.formattedName,
-            payload = createPayload(
-                event = PayloadEvent.THUMB,
-                value = stateID
-            )
+            payload = createPayload(event = PayloadEvent.THUMB, value = stateID)
         )
 
 
@@ -419,69 +314,40 @@ class VeadoRequest {
          *
          * @see [RequestPayload.RequestPayloadEvent]
          * @see [RequestPayload.RequestPayloadEventToken]
-         *
          */
         @JvmOverloads
         @JvmStatic
         fun createRequest(
-            event: MessageEvent = MessageEvent.PAYLOAD,
-            type: MessagePayloadType? = MessagePayloadType.STATE_EVENTS,
-            id: String = MessagePayloadId.MINI.formattedName,
-            payload: RequestPayload? = null
+            event: MessageEvent = MessageEvent.PAYLOAD, type: MessagePayloadType? = MessagePayloadType.STATE_EVENTS,
+            id: String = MessagePayloadId.MINI.formattedName, payload: RequestPayload? = null
         ): RequestMessage {
             val newRequest: RequestMessage = when (event) {
                 /* List as base event is just a payload an Event Payload */
-                MessageEvent.INFO -> {
-                    /* Return InstanceInfo */
-                    getEventInfo
-                }
-
+                MessageEvent.INFO -> getEventInfo /* Return InstanceInfo */
                 /* List as base event is just a payload an Event Payload */
-                MessageEvent.LIST -> {
-                    /*Return Common/Reusable Object*/
-                    getEventList
-                }
-
-                MessageEvent.PAYLOAD -> {
-                    when (type) {
-
-                        MessagePayloadType.STATE_EVENTS, MessagePayloadType.BOOLEAN, MessagePayloadType.NUMBER -> {
-                            require(id.isNotBlank()) { "ID cannot be Blank for Request ${MessageEvent.PAYLOAD} with Type ${MessagePayloadType.STATE_EVENTS}" }
-                            require(payload != null) { "Payload cannot be Null for Request ${MessageEvent.PAYLOAD} with Type ${MessagePayloadType.STATE_EVENTS}" }
-
-                            RequestMessageNodeEvent(
-                                event = event.formattedName,
-                                type = type.formattedName,
-                                id = id,
-                                payload = payload
-                            )
-                        }
-
-                        /* Type not specified - invalid */
-                        null -> {
-                            throw IllegalArgumentException("Type cannot be Null for Request ${MessageEvent.PAYLOAD}")
-                        }
-
-                        MessagePayloadType.UNKNOWN -> {
-                            throw IllegalArgumentException("Type cannot be UNKNOWN")
-                        }
-
+                MessageEvent.LIST -> getEventList /* Return Common/Reusable Object */
+                MessageEvent.PAYLOAD -> when (type) {
+                    MessagePayloadType.STATE_EVENTS, MessagePayloadType.BOOLEAN, MessagePayloadType.NUMBER -> {
+                        require(id.isNotBlank()) { "ID cannot be Blank for Request ${MessageEvent.PAYLOAD} with Type ${MessagePayloadType.STATE_EVENTS}" }
+                        require(payload != null) { "Payload cannot be Null for Request ${MessageEvent.PAYLOAD} with Type ${MessagePayloadType.STATE_EVENTS}" }
+                        RequestMessageNodeEvent(
+                            event = event.formattedName, type = type.formattedName, id = id, payload = payload
+                        )
                     }
+                    null -> { /* Type not specified - invalid */
+                        throw IllegalArgumentException("Type cannot be Null for Request ${MessageEvent.PAYLOAD}")
+                    }
+                    MessagePayloadType.UNKNOWN -> throw IllegalArgumentException("Type cannot be UNKNOWN")
                 }
-
                 else -> {
                     throw IllegalArgumentException("Event can't be $event, must be ${MessageEvent.LIST} or ${MessageEvent.PAYLOAD}")
                 }
-
             }
-
             return newRequest
         }
 
-
         /**
          * Returns a Payload that inherits [RequestPayload]
-         *
          *
          * [event] = [PayloadEvent.LIST] or [PayloadEvent.PEEK]
          * * Doesn't require [value], anything provided will be ignored.
@@ -490,12 +356,10 @@ class VeadoRequest {
          * - they can be accessed directly, and should be used instead if possible
          * * (See [RequestPayload.RequestPayloadEvent])
          *
-         *
          * [event] = [PayloadEvent.LISTEN] & [PayloadEvent.UNLISTEN]
          * * Uses [value] as the Token.
          * * Must be non-blank and non-null.
          * * (See [RequestPayload.RequestPayloadEventToken])
-         *
          *
          * [event] = [PayloadEvent.SET], [PayloadEvent.PUSH], [PayloadEvent.POP], & [PayloadEvent.THUMB]
          * * Uses [value] as the State ID if not a Boolean or Number
@@ -503,59 +367,30 @@ class VeadoRequest {
          * * (See [RequestPayload.RequestPayloadEventStateString])
          * * If a Boolean, it can be "toggle"
          *
-         *
          * @param event event value, should match [PayloadEvent] (except [PayloadEvent.UNKNOWN])
-         *
          *
          * @see [RequestPayload.RequestPayloadEvent]
          * @see [RequestPayload.RequestPayloadEventToken]
-         *
          */
         @JvmOverloads
         @JvmStatic
         fun createPayload(event: PayloadEvent, value: String? = null): RequestPayload {
             require(event != PayloadEvent.UNKNOWN) { "Payload Event can't be UNKNOWN" }
-
             val newRequest: RequestPayload =
                 when (event) {
-
-                    PayloadEvent.LIST -> {
-                        /*Return Common/Reusable Object*/
-                        getPayloadEventList
-                    }
-
-                    PayloadEvent.PEEK -> {
-                        /*Return Common/Reusable Object*/
-                        getPayloadEventPeek
-                    }
-
-                    PayloadEvent.CLEAR -> {
-                        /*Return Common/Reusable Object*/
-                        getPayloadEventClear
-                    }
-
+                    PayloadEvent.LIST -> getPayloadEventList /*Return Common/Reusable Object*/
+                    PayloadEvent.PEEK -> getPayloadEventPeek /*Return Common/Reusable Object*/
+                    PayloadEvent.CLEAR -> getPayloadEventClear /*Return Common/Reusable Object*/
                     PayloadEvent.LISTEN, PayloadEvent.UNLISTEN -> {
                         require(!value.isNullOrBlank()) { "Token Value for Payload $event Event can't be Null or Blank" }
-                        RequestPayloadEventToken(
-                            event = event.formattedName,
-                            token = value
-                        )
+                        RequestPayloadEventToken(event = event.formattedName, token = value)
                     }
-
                     PayloadEvent.SET, PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB, PayloadEvent.TOGGLE -> {
                         require(!value.isNullOrBlank()) { "State Value for Payload $event Event can't be Null or Blank" }
-                        RequestPayloadEventStateString(
-                            event = event.formattedName,
-                            state = value
-                        )
+                        RequestPayloadEventStateString(event = event.formattedName, state = value)
                     }
-
-                    else -> {
-                        throw IllegalArgumentException("Unknown Event: $event")
-                    }
-
+                    else -> throw IllegalArgumentException("Unknown Event: $event")
                 }
-
             return newRequest
         }
 
@@ -566,63 +401,32 @@ class VeadoRequest {
          * * [value] should be `true` or `false`.
          *
          * @param event event value, should match [PayloadEvent] (except [PayloadEvent.UNKNOWN])
-         *
-         *
          */
         @JvmStatic
         fun createPayload(event: PayloadEvent, value: Boolean): RequestPayload {
             require(event != PayloadEvent.UNKNOWN) { "Payload Event can't be UNKNOWN" }
-
-            val newRequest: RequestPayload =
-                when (event) {
-
-                    PayloadEvent.SET -> {
-                        RequestPayloadEventValueBoolean(
-                            event = event.formattedName,
-                            value = value
-                        )
-                    }
-
-                    PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB, PayloadEvent.LIST, PayloadEvent.PEEK, PayloadEvent.LISTEN, PayloadEvent.UNLISTEN -> {
-                        throw IllegalArgumentException("Event Doesn't support Boolean value: $event")
-                    }
-
-                    else -> {
-                        throw IllegalArgumentException("Unknown Event: $event")
-                    }
-
-                }
-
-            return newRequest
+            return when (event) {
+                PayloadEvent.SET -> RequestPayloadEventValueBoolean(event = event.formattedName, value = value)
+                PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB, PayloadEvent.LIST, PayloadEvent.PEEK,
+                PayloadEvent.LISTEN, PayloadEvent.UNLISTEN -> throw IllegalArgumentException("Event Doesn't support Boolean value: $event")
+                else -> throw IllegalArgumentException("Unknown Event: $event")
+            }
         }
 
         /**
          * Returns a Payload that inherits [RequestPayload] for Boolean
          *
          * * [value] should be `true` or `false`.
-         *
          */
         @JvmStatic
         fun createPayloadSetBoolean(value: Boolean): RequestPayload {
-            return RequestPayloadEventValueBoolean(
-                event = PayloadEvent.SET.formattedName,
-                value = value
-            )
+            return RequestPayloadEventValueBoolean(event = PayloadEvent.SET.formattedName, value = value)
         }
 
-        /**
-         * Returns a Payload that inherits [RequestPayload] for Boolean
-         *
-         * * [value] us usually an ID, or 'toggle'/'clear'
-         *
-         */
+        /** Returns a Clear Payload that inherits [RequestPayload] for Boolean */
         @JvmStatic
-        fun createPayloadSetBoolean(value: String): RequestPayload {
-            require(value.isNotEmpty()) { "Value for Payload Set Event can't be Empty" }
-            return RequestPayloadEventValueString(
-                event = PayloadEvent.SET.formattedName,
-                value = value
-            )
+        fun createPayloadClearBoolean(): RequestPayload {
+            return RequestPayloadEventString(event = PayloadEvent.CLEAR)
         }
 
         /**
@@ -634,25 +438,13 @@ class VeadoRequest {
          */
         @JvmOverloads
         @JvmStatic
-        fun createPayloadSetNumber(
-            value: Double,
-            min: Double? = null,
-            max: Double? = null
-        ): RequestPayload {
+        fun createPayloadSetNumber(value: Double, min: Double? = null, max: Double? = null): RequestPayload {
             return if (min != null || max != null)
                 RequestPayloadEventValueNumberMinMax(
                     event = PayloadEvent.SET.formattedName,
-                    value = RequestPayloadEventNumberValueMulti(
-                        value = value,
-                        min = min,
-                        max = max
-                    )
+                    value = RequestPayloadEventNumberValueMulti(value = value, min = min, max = max)
                 )
-            else
-                RequestPayloadEventValueNumber(
-                    event = PayloadEvent.SET.formattedName,
-                    value = value
-                )
+            else RequestPayloadEventValueNumber(event = PayloadEvent.SET.formattedName, value = value)
         }
 
         /**
@@ -665,31 +457,26 @@ class VeadoRequest {
         @JvmOverloads
         @JvmStatic
         fun createPayloadAddNumber(
-            value: Double,
-            min: Double? = null,
-            max: Double? = null
+            value: Double, min: Double? = null, max: Double? = null
         ): RequestPayload {
             return if (min != null || max != null)
                 RequestPayloadEventValueNumberMinMax(
                     event = PayloadEvent.ADD.formattedName,
-                    value = RequestPayloadEventNumberValueMulti(
-                        value = value,
-                        min = min,
-                        max = max
-                    )
+                    value = RequestPayloadEventNumberValueMulti(value = value, min = min, max = max)
                 )
-            else
-                RequestPayloadEventValueNumber(
-                    event = PayloadEvent.ADD.formattedName,
-                    value = value
-                )
+            else RequestPayloadEventValueNumber(event = PayloadEvent.ADD.formattedName, value = value)
+        }
+
+        /** Returns a Clear Payload that inherits [RequestPayload] for Number Nodes */
+        @JvmStatic
+        fun createPayloadClearNumber(): RequestPayload {
+            return RequestPayloadEventString(event = PayloadEvent.CLEAR)
         }
 
         /**
          * Returns a Request that inherits [RequestMessage] with a Payload
          *
          * Convenience Function to combine [createRequest] and [createPayload]
-         *
          *
          * Common Uses:
          *
@@ -698,33 +485,23 @@ class VeadoRequest {
          * * Returns [VeadoRequest.getEventList] - it can be accessed directly, and should be used instead if possible
          * * (See [RequestPayload.RequestPayloadEvent])
          *
-         *
          * [event] = [MessageEvent.PAYLOAD]
          * * Uses [type], [id], can be provided while [payloadEvent] must be provided, along with [payloadValue] if it's needed
          * * All must be non-blank and non-null.
          * * (See [RequestPayload.RequestPayloadEventToken])
          *
-         *
          * @see [RequestPayload.RequestPayloadEvent]
          * @see [RequestPayload.RequestPayloadEventToken]
          * @see [createRequest]
-         *
          */
         @JvmOverloads
         @JvmStatic
         fun createRequestWithPayload(
-            event: MessageEvent = MessageEvent.PAYLOAD,
-            type: MessagePayloadType? = MessagePayloadType.STATE_EVENTS,
-            id: String = MessagePayloadId.MINI.formattedName,
-            payloadEvent: PayloadEvent, payloadValue: String? = null
+            event: MessageEvent = MessageEvent.PAYLOAD, type: MessagePayloadType? = MessagePayloadType.STATE_EVENTS,
+            id: String = MessagePayloadId.MINI.formattedName, payloadEvent: PayloadEvent, payloadValue: String? = null
         ) = createRequest(
-            event = event,
-            type = type,
-            id = id,
-            payload = createPayload(
-                event = payloadEvent,
-                value = payloadValue
-            )
+            event = event, type = type, id = id,
+            payload = createPayload(event = payloadEvent, value = payloadValue)
         )
 
         /**
@@ -732,35 +509,23 @@ class VeadoRequest {
          *
          * Convenience Function to combine [createRequest] and [createPayload]
          *
-         *
          * Common Uses:
-         *
          *
          * [event] = [MessageEvent.PAYLOAD]
          * * Uses [type], [id], can be provided while [payloadEvent] must be provided, along with [payloadValue]
          * * Boolean
          *
-         *
          * @see [RequestPayload.RequestPayloadEvent]
          * @see [RequestPayload.RequestPayloadEventToken]
          * @see [createRequest]
-         *
          */
         @JvmOverloads
         @JvmStatic
         fun createRequestWithPayload(
-            event: MessageEvent = MessageEvent.PAYLOAD,
-            type: MessagePayloadType? = MessagePayloadType.STATE_EVENTS,
-            id: String = MessagePayloadId.MINI.formattedName,
-            payloadEvent: PayloadEvent, payloadValue: Boolean
+            event: MessageEvent = MessageEvent.PAYLOAD, type: MessagePayloadType? = MessagePayloadType.STATE_EVENTS,
+            id: String = MessagePayloadId.MINI.formattedName, payloadEvent: PayloadEvent, payloadValue: Boolean
         ) = createRequest(
-            event = event,
-            type = type,
-            id = id,
-            payload = createPayload(
-                event = payloadEvent,
-                value = payloadValue
-            )
+            event = event, type = type, id = id, payload = createPayload(event = payloadEvent, value = payloadValue)
         )
 
         /**
@@ -783,97 +548,68 @@ class VeadoRequest {
             val errorSb by lazy { StringBuilder().append { "Request: " } }
             var valid = true
 
-            when {
-                /* Check vs Type Block Start */
-                (requestData is RequestMessageInstanceInfo) -> {
-                    /* Check VtRequestNodeList Block Start */
+            when (requestData) { /* Check vs Type Block Start */
+                is RequestMessageInstanceInfo -> {
                     if (MessageEvent.fromFormattedName(requestData.event) != MessageEvent.INFO) {
-                        valid = false
-                        errorSb.append { "event (${requestData.event});" }
+                        valid = false; errorSb.append { "event (${requestData.event});" }
                     }
-                    /* Check VtRequestNodeList Block End */
                 }
-
-                (requestData is RequestMessageNodeList) -> {
-                    /* Check VtRequestNodeList Block Start */
+                is RequestMessageNodeList -> {
                     if (MessageEvent.fromFormattedName(requestData.event) != MessageEvent.LIST) {
-                        valid = false
-                        errorSb.append { "event (${requestData.event});" }
+                        valid = false; errorSb.append { "event (${requestData.event});" }
                     }
-                    /* Check VtRequestNodeList Block End */
                 }
-
-                (requestData is RequestMessageNodeEventToken) -> {
+                is RequestMessageNodeEventToken -> {
                     /* Check RequestMessageNodeEventToken Block Start */
                     when (MessageEvent.fromFormattedName(requestData.event)) {
                         /* Token Check */
-                        MessageEvent.LISTEN, MessageEvent.UNLISTEN -> {
-                            /* Valid, make sure not blank */
-                            if (requestData.token.isBlank()) {
-                                valid = false
-                                errorSb.append { "token (is blank);" }
+                        MessageEvent.LISTEN, MessageEvent.UNLISTEN ->
+                            if (requestData.token.isBlank()) { /* Valid, make sure not blank */
+                                valid = false; errorSb.append { "token (is blank);" }
                             }
-                        }
-
                         else -> {
-                            valid = false
-                            errorSb.append { "event (${requestData.event});" }
+                            valid = false; errorSb.append { "event (${requestData.event});" }
                         }
                     }
                     /* Check RequestMessageNodeEventToken Block End */
                 }
-
-                (requestData is RequestMessageNodeEvent) -> {
+                is RequestMessageNodeEvent -> {
                     /* Check VtRequestNodeMessage Block Start */
                     when (MessageEvent.fromFormattedName(requestData.event)) {
                         MessageEvent.PAYLOAD -> {
-                            /*Valid, but other values need checking */
-
+                            /* Valid, but other values need checking */
                             /* Check Request Values Start */
                             if (MessagePayloadType.fromFormattedName(requestData.type) != MessagePayloadType.STATE_EVENTS) {
-                                valid = false
-                                errorSb.append { "type (${requestData.type});" }
+                                valid = false; errorSb.append { "type (${requestData.type});" }
                             }
-
                             if (requestData.id.isBlank()) {
-                                valid = false
-                                errorSb.append { "id (${requestData.id});" }
+                                valid = false; errorSb.append { "id (${requestData.id});" }
                             }
-
-                            /*Payload Check*/
+                            /* Payload Check */
                             try {
                                 validatePayload(requestData.payload)
                             } catch (ex: Exception) {
-                                valid = false
-                                errorSb.append { ex.message }
+                                valid = false; errorSb.append { ex.message }
                             }
-
                             /* Check Request Values End */
                         }
-
                         else -> {
                             // Other Values aren't valid here
-                            valid = false
-                            errorSb.append { "event (${requestData.event});" }
+                            valid = false; errorSb.append { "event (${requestData.event});" }
                         }
-
                     }
                     /* Check VtRequestNodeMessage Block End */
                 }
                 /* Check vs Type Block End */
                 else -> {
-                    valid = false
-                    errorSb.append { "class (${requestData::javaClass});" }
+                    valid = false; errorSb.append { "class (${requestData::javaClass});" }
                 }
             }
 
-
-            //If not Valid Throw IllegalStateException with Error String
-            if (!valid) {
+            if (!valid) { // If not Valid Throw IllegalStateException with Error String
                 throw IllegalStateException(errorSb.toString())
             }
 
-            //return true
             return true
         }
 
@@ -895,65 +631,49 @@ class VeadoRequest {
             val errorSb by lazy { StringBuilder().append { "Payload: " } }
             var valid = true
 
-            when {
-                (payloadData is RequestPayloadEvent) -> {
+            when (payloadData) {
+                is RequestPayloadEvent -> {
                     /* Check VtRequestPayloadEvent Block Start */
                     when (PayloadEvent.fromFormattedName(payloadData.event)) {
                         PayloadEvent.LIST, PayloadEvent.PEEK -> {/* Valid, no more to do */
                         }
-
                         else -> {
-                            valid = false
-                            errorSb.append { "event (${payloadData.event});" }
+                            valid = false; errorSb.append { "event (${payloadData.event});" }
                         }
                     }
                     /* Check VtRequestPayloadEvent Block End */
                 }
-
-                (payloadData is RequestPayloadEventToken) -> {
+                is RequestPayloadEventToken -> {
                     /* Check VTRequestPayloadEventToken Block Start */
                     when (PayloadEvent.fromFormattedName(payloadData.event)) {
                         PayloadEvent.LISTEN, PayloadEvent.UNLISTEN -> {
-                            /* Valid, make sure not blank */
-                            if (payloadData.token.isBlank()) {
-                                valid = false
-                                errorSb.append { "token (is blank);" }
+                            if (payloadData.token.isBlank()) { /* Valid, make sure not blank */
+                                valid = false; errorSb.append { "token (is blank);" }
                             }
                         }
-
                         else -> {
-                            valid = false
-                            errorSb.append { "event (${payloadData.event});" }
+                            valid = false; errorSb.append { "event (${payloadData.event});" }
                         }
                     }
                     /* Check VTRequestPayloadEventToken Block End */
                 }
-
-                (payloadData is RequestPayloadEventStateString) -> {
+                is RequestPayloadEventStateString -> {
                     /* Check VTRequestPayloadEventState Block Start */
                     when (PayloadEvent.fromFormattedName(payloadData.event)) {
                         PayloadEvent.SET, PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB -> {
-                            /* Valid, make sure not blank */
-                            if (payloadData.state.isBlank()) {
-                                valid = false
-                                errorSb.append { "state (is blank);" }
+                            if (payloadData.state.isBlank()) { /* Valid, make sure not blank */
+                                valid = false; errorSb.append { "state (is blank);" }
                             }
                         }
-
                         else -> {
-                            valid = false
-                            errorSb.append { "event (${payloadData.event});" }
+                            valid = false; errorSb.append { "event (${payloadData.event});" }
                         }
                     }
                     /* Check VTRequestPayloadEventState Block End */
                 }
-
-                /* Check vs Type Block End */
                 else -> {
-                    valid = false
-                    errorSb.append { "class (${payloadData::javaClass});" }
+                    valid = false; errorSb.append { "class (${payloadData::javaClass});" }
                 }
-
             }
 
             //If not Valid Throw IllegalStateException with Error String
@@ -961,7 +681,6 @@ class VeadoRequest {
                 throw IllegalStateException(errorSb.toString())
             }
 
-            //return true
             return true
         }
 
