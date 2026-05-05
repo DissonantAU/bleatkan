@@ -216,14 +216,11 @@ sealed class RequestPayload {
      *
      */
     @Serializable
-    data class RequestPayloadEventValueString(
-        override val event: String,
-        /**
-         * String for event. e.g. "toggle" or "clear"
-         */
-        val value: String
+    data class RequestPayloadEventString(
+        /** String for event. e.g. "toggle" or "clear" */
+        override val event: String
     ) : RequestPayload() {
-        constructor(event: PayloadEvent, value: String) : this(event.formattedName, value)
+        constructor(event: PayloadEvent) : this(event.formattedName)
     }
 
     /**
@@ -239,8 +236,7 @@ sealed class RequestPayload {
      */
     @Serializable
     data class RequestPayloadEventValueNumber(
-        override val event: String,
-        val value: Double
+        override val event: String,        val value: Double
     ) : RequestPayload() {
         constructor(event: PayloadEvent, value: Double) : this(event.formattedName, value)
     }
@@ -258,11 +254,9 @@ sealed class RequestPayload {
      */
     @Serializable
     data class RequestPayloadEventValueNumberMinMax(
-        override val event: String,
-        val value: RequestPayloadEventNumberValueMulti
+        override val event: String,        val value: RequestPayloadEventNumberValueMulti
     ) : RequestPayload() {
-        constructor(event: PayloadEvent, value: RequestPayloadEventNumberValueMulti)
-                : this(event.formattedName, value)
+        constructor(event: PayloadEvent, value: RequestPayloadEventNumberValueMulti) : this(event.formattedName, value)
     }
 
     /**
