@@ -385,7 +385,14 @@ class VeadoRequest {
                         require(!value.isNullOrBlank()) { "Token Value for Payload $event Event can't be Null or Blank" }
                         RequestPayloadEventToken(event = event.formattedName, token = value)
                     }
-                    PayloadEvent.SET, PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB, PayloadEvent.TOGGLE -> {
+                    PayloadEvent.TOGGLE -> {
+                        if (value == null) RequestPayloadEventString(event = event.formattedName)
+                        else {
+                            require(value.isNotBlank()) { "State Value for Payload $event Event can't be Null or Blank" }
+                            RequestPayloadEventStateString(event = event.formattedName, state = value)
+                        }
+                    }
+                    PayloadEvent.SET, PayloadEvent.PUSH, PayloadEvent.POP, PayloadEvent.THUMB -> {
                         require(!value.isNullOrBlank()) { "State Value for Payload $event Event can't be Null or Blank" }
                         RequestPayloadEventStateString(event = event.formattedName, state = value)
                     }
