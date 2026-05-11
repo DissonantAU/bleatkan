@@ -243,6 +243,30 @@ class VeadoRequest {
         )
 
         /**
+         * Returns a Request [RequestMessage] with a Listen State Payload [RequestPayload]
+         *
+         * Convenience Function to build a Listen Avatar State Request
+         *
+         * Equivalent of
+         * createRequest(
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
+         *  id = [MessagePayloadId.MINI].value,
+         *  payload = createPayload( event = [PayloadEvent.LISTEN], value = [stateID] )
+         * )
+         *
+         * @param stateID Avatar State ID
+         *
+         * @see createRequest
+         * @see createPayload
+         */
+        @JvmStatic
+        fun createListenPttMini(stateID: String) = createRequest(
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.BOOLEAN,
+            id = MessagePayloadId.MINI.formattedName,
+            payload = createPayload(event = PayloadEvent.LISTEN, value = stateID)
+        )
+
+        /**
          * Returns a Request [RequestMessage] with an Unlisten State Payload [RequestPayload]
          *
          * Convenience Function to build an Unlisten Avatar State Request
@@ -265,6 +289,51 @@ class VeadoRequest {
             id = MessagePayloadId.MINI.formattedName,
             payload = createPayload(event = PayloadEvent.UNLISTEN, value = stateID)
         )
+
+        /**
+         * Returns a Request [RequestMessage] with an Unlisten State Payload [RequestPayload]
+         *
+         * Convenience Function to build an Unlisten Avatar State Request
+         *
+         * Equivalent of
+         * createRequest(
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
+         *  id = [MessagePayloadId.MINI].value,
+         *  payload = createPayload( event = [PayloadEvent.UNLISTEN], value = [stateID] )
+         * )
+         *
+         * @param stateID Avatar State ID
+         *
+         * @see createRequest
+         * @see createPayload
+         */
+        @JvmStatic
+        fun createUnlistenPttMini(stateID: String) = createRequest(
+            event = MessageEvent.PAYLOAD, type = MessagePayloadType.BOOLEAN,
+            id = MessagePayloadId.MINI.formattedName,
+            payload = createPayload(event = PayloadEvent.UNLISTEN, value = stateID)
+        )
+
+        /** Common Prebuilt Request to get the current Push-To-Talk from Veadotube Mini
+         *
+         * Equivalent of
+         * createRequest(
+         *  event = [MessageEvent.PAYLOAD], type = [MessagePayloadType.STATE_EVENTS],
+         *  id = [MessagePayloadId.MINI].formattedName,
+         *  payload = `RequestPayloadEventString(event = PayloadEvent.GET)`
+         * )
+         *
+         * @see createRequest
+         * @see getPayloadEventPeek
+         * */
+        @JvmStatic
+        val getValuePttMini: RequestMessage by lazy {
+            createRequest(
+                event = MessageEvent.PAYLOAD, type = MessagePayloadType.BOOLEAN,
+                id = MessagePayloadId.MINI.formattedName,
+                payload = RequestPayloadEventString(event = PayloadEvent.GET)
+            )
+        }
 
         /**
          * Returns a Request [RequestMessage] with a Thumbnail State Payload [RequestPayload]
@@ -391,6 +460,8 @@ class VeadoRequest {
                         require(!value.isNullOrBlank()) { "State Value for Payload $event Event can't be Null or Blank" }
                         RequestPayloadEventStateString(event = event.formattedName, state = value)
                     }
+                    // TODO PayloadEvent.GET -> getPayloadEventGET
+                    // TODO PayloadEvent.ADD -> RequestPayload.RequestPayloadEventValueNumber(event = event.formattedName, value = value)
                     else -> throw IllegalArgumentException("Unknown Event: $event")
                 }
             return newRequest
