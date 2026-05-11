@@ -1,6 +1,5 @@
 package io.github.dissonantau.bleatkan.instance
 
-
 /**
  * Object to hold parse basic Instance information
  *
@@ -11,7 +10,6 @@ package io.github.dissonantau.bleatkan.instance
  * Immutable, can't be modified after creation
  *
  * @see <a href="https://gitlab.com/veadotube/bleatcan/-/blob/b1d4faf70138c1e839b449c3cf799b6fd59c837b/bleatcan/InstanceID.cs">Veadotube bleatcan InstanceID.cs on Gitlab</a> (Original Reference)
- *
  */
 class InstanceID : Comparable<InstanceID> {
 
@@ -34,7 +32,6 @@ class InstanceID : Comparable<InstanceID> {
      * @param type Veadotube Instance Type/Edition
      * @param timestamp Time Veadotube Instance was Launched
      * @param process Process ID of Veadotube Instance
-     *
      */
     @Suppress("unused")
     constructor(type: String, timestamp: Long, process: Int) {
@@ -49,7 +46,6 @@ class InstanceID : Comparable<InstanceID> {
         //Generate Instance ID String
         instanceID = generateInstanceIDString(type, timestamp, process)
     }
-
 
     /**
      * Object to hold parse basic Instance information
@@ -68,7 +64,6 @@ class InstanceID : Comparable<InstanceID> {
      * @see <a href="https://gitlab.com/veadotube/bleatcan/-/blob/b1d4faf70138c1e839b449c3cf799b6fd59c837b/bleatcan/InstanceID.cs">Veadotube bleatcan InstanceID.cs on Gitlab</a> (Original Reference)
      *
      * @param instanceIdString Filename of Instance File
-     *
      */
     constructor(instanceIdString: String) {
 
@@ -134,14 +129,10 @@ class InstanceID : Comparable<InstanceID> {
      */
     val process: Int
 
-
-    /** Store Filename/Original for use in toString*/
+    /** Store Filename/Original for use in toString */
     private val instanceID: String
 
-
-    /**
-     * @return `String` in the format *Type-LaunchTime:Hex-ProcessId:Hex*
-     */
+    /** @return `String` in the format *Type-LaunchTime:Hex-ProcessId:Hex* */
     override fun toString(): String {
         return instanceID
     }
@@ -156,7 +147,6 @@ class InstanceID : Comparable<InstanceID> {
         return timestamp == that.timestamp && process == that.process && type == that.type
     }
 
-
     /**
      * Comparison method for sorting, etc.
      * Sorted by Launch Time, then using ToString (Type-LaunchTime-ProcessId) if Launched at the same time
@@ -168,7 +158,6 @@ class InstanceID : Comparable<InstanceID> {
         val c = this.timestamp.compareTo(other.timestamp)
         return if (c != 0) c else this.toString().compareTo(other.toString())
     }
-
 
     override fun hashCode(): Int {
         var result = type.hashCode()
@@ -183,15 +172,13 @@ class InstanceID : Comparable<InstanceID> {
          * String Format - Converts back to same format as instance file name
          */
 
+        /** String Format - Converts back to same format as instance file name */
         const val FORMAT_STRING = "%s-%016x-%08x"
 
-        /**
-         * Generates an InstanceID String from an [InstanceID] using [FORMAT_STRING]
-         */
+        /** Generates an InstanceID String from an [InstanceID] using [FORMAT_STRING] */
         @JvmStatic
         fun generateStringFromID(instanceID: InstanceID) =
             FORMAT_STRING.format(instanceID.type, instanceID.timestamp, instanceID.process)
-
 
         /**
          * Generates an InstanceID String using [FORMAT_STRING]
@@ -203,7 +190,6 @@ class InstanceID : Comparable<InstanceID> {
         @JvmStatic
         fun generateInstanceIDString(type: String, timestamp: Long, process: Int) =
             FORMAT_STRING.format(type, timestamp, process)
-
 
         /**
          * Takes the File Name, Splits into 3 Parts Tests
@@ -252,7 +238,5 @@ class InstanceID : Comparable<InstanceID> {
         fun notEquals(a: InstanceID, b: InstanceID): Boolean {
             return a != b
         }
-
-
     }
 }

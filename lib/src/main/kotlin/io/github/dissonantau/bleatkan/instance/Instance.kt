@@ -1,6 +1,5 @@
 package io.github.dissonantau.bleatkan.instance
 
-
 import io.github.dissonantau.bleatkan.connection.Connection
 import io.github.dissonantau.bleatkan.connection.ConnectionListener
 import java.net.URI
@@ -8,7 +7,6 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.Comparator
 import kotlin.jvm.Throws
-
 
 /**
  * Represents an Instance

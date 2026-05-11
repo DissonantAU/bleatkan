@@ -3,11 +3,9 @@
 
 package io.github.dissonantau.bleatkan.message
 
-
 import io.ktor.util.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.JsonClassDiscriminator
-
 
 /**
  * Result Message
@@ -25,9 +23,7 @@ sealed class ResultMessage {
      */
     abstract val event: String
 
-    /**
-     * Result Message with a Payload
-     */
+    /** Result Message with a Payload */
     @Serializable
     //@SerialName("payload")
     data class ResultMessageWithPayload(
@@ -42,9 +38,7 @@ sealed class ResultMessage {
         val payload: ResultPayload
     ) : ResultMessage()
 
-    /**
-     * Result Message with Number Payload
-     */
+    /** Result Message with Number Payload */
     @Serializable
     //@SerialName("payload") //type number
     data class ResultMessageWithPayloadNumber(
@@ -78,9 +72,7 @@ sealed class ResultMessage {
         val payload: Boolean
     ) : ResultMessage()
 
-    /**
-     * Result Message with a List of Entries
-     */
+    /** Result Message with a List of Entries */
     @Serializable
     //@SerialName("list")
     data class ResultMessageWithNodeEntryList(
@@ -174,13 +166,9 @@ sealed class ResultPayload {
     data class ResultPayloadPng(
         override val event: String,
         val state: String,
-        /**
-         * PNG Width in Pixels
-         */
+        /** PNG Width in Pixels */
         val width: Int,
-        /**
-         * PNG Height in Pixels
-         */
+        /** PNG Height in Pixels */
         val height: Int,
         /**
          * PNG Encoded as a Base64 Encoded String
@@ -194,7 +182,6 @@ sealed class ResultPayload {
          * Added 2.1, can be used to identify changes to State Thumbnail (e.g. to clear cached thumbnails when a state is changed)
          *
          * Consistent during the lifetime of a single run, but not across restarts
-         *
          */
         val hash: String? = null,
     ) : ResultPayload() {
@@ -270,7 +257,6 @@ data class ResultPayloadSpecialNumber(
         get() = max.isFinite()
 }
 
-
 @Serializable
 data class State(
     /**
@@ -293,11 +279,9 @@ data class State(
      * Added 2.1, can be used to identify changes to State Thumbnail (e.g. to clear cached thumbnails when a state is changed)
      *
      * Consistent during the lifetime of a single run, but not across restarts
-     *
      */
     val thumbHash: String? = null
 )
-
 
 @Serializable
 data class Entry(
