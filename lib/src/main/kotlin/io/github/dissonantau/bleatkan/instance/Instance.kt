@@ -114,11 +114,8 @@ data class Instance(
         version: String = "2.0", language: String = "en",
         lastModified: Long
     ) : this(
-        id = id,
-        title = name,
-        server = server,
-        version = version,
-        language = language
+        id = id, title = name, server = server,
+        version = version, language = language
     ) {
         fileLastModified = lastModified
     }

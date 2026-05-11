@@ -262,8 +262,7 @@ class Connection : AutoCloseable {
      */
     @Throws(IllegalArgumentException::class, IllegalStateException::class)
     constructor(
-        instance: Instance,
-        listener: ConnectionListener,
+        instance: Instance, listener: ConnectionListener,
         connectionName: String = "bleatkan-${instance.id}",
     ) : this(
         instance = instance, listener = listener, connectionName = connectionName,
@@ -292,12 +291,10 @@ class Connection : AutoCloseable {
     internal constructor(
         instance: Instance = Instance(
             id = InstanceID("mini", 12345678, 1234),
-            title = "dummy", server = "127.0.0.10:12345",
-            version = "2.1a"
+            title = "dummy", server = "127.0.0.10:12345", version = "2.1a"
         ),
         listener: ConnectionListener,
-        testFrameChannel: ReceiveChannel<Frame>,
-        mockWebSocketSession: WebSocketSession,
+        testFrameChannel: ReceiveChannel<Frame>, mockWebSocketSession: WebSocketSession,
         connectionName: String = "bleatkan-${instance.id}",
     ) {
         LOGGER.trace { "Constructing Connection" }
@@ -429,8 +426,7 @@ class Connection : AutoCloseable {
     }
 
     private fun stopWebsocket(
-        closeReason: CloseReason.Codes = CloseReason.Codes.NORMAL,
-        closeMessage: String = "bye"
+        closeReason: CloseReason.Codes = CloseReason.Codes.NORMAL, closeMessage: String = "bye"
     ) {
         LOGGER.trace { "stopWebsocket: Begin" }
 
