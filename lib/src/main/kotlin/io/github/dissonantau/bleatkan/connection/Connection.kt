@@ -138,54 +138,34 @@ class Connection : AutoCloseable {
     @Suppress("MemberVisibilityCanBePrivate")
     val connectionTimeMillis: Long
 
-    /**
-     * ID for the Connection - Currently the URI String
-     */
+    /** ID for the Connection - Currently the URI String */
     val id: String
 
-    /**
-     * Coroutine Job - contains all Jobs for this Connection
-     */
+    /** Coroutine Job - contains all Jobs for this Connection */
     private val connectionJob: Job
 
-    /**
-     * Coroutine Dispatcher for Connection
-     */
+    /** Coroutine Dispatcher for Connection */
     private val wsReceiveDispatcher: CoroutineDispatcher
 
-    /**
-     * Context for this Connection
-     */
+    /** Context for this Connection */
     private val websocketContext: CoroutineContext
 
-    /**
-     * Context & Job for this Connection
-     */
+    /** Context & Job for this Connection */
     private val websocketJobContext: CoroutineContext
 
-    /**
-     * Scope for this Connection, should be used to launch Jobs
-     */
+    /** Scope for this Connection, should be used to launch Jobs */
     private val websocketScope: CoroutineScope
 
-    /**
-     * Parallelism for Websocket Context
-     */
+    /** Parallelism for Websocket Context */
     private val websocketParallelism = 3
 
-    /**
-     * Mutex for HttpClient Creation/Removal
-     */
+    /** Mutex for HttpClient Creation/Removal */
     private var httpClientMutex: Mutex = Mutex()
 
-    /**
-     * HttpClient that creates Websocket Sessions, etc.
-     */
+    /** HttpClient that creates Websocket Sessions, etc. */
     private var httpClient: HttpClient? = null
 
-    /**
-     * WebSocket Session
-     */
+    /** WebSocket Session */
     private var webSocketSession: WebSocketSession? = null
 
     /** Deferred Close Reason for the Websocket to get Close Reason after Close */
@@ -311,7 +291,6 @@ class Connection : AutoCloseable {
         instance = instance, listener = listener, connectionName = connectionName,
         connectionJobParent = connectionDefaultJobParent
     )
-
 
     /**
      * Represents a Connection to a Veadotube Instance.
@@ -452,7 +431,6 @@ class Connection : AutoCloseable {
         LOGGER.trace { "Connection Constructor: HTTPClient Creation End" }
     }
 
-
     private fun shutdownHttpClient() {
         LOGGER.trace { "shutdownHttpClient(): HTTPClient Shutdown Start" }
         if (httpClient == null) return
@@ -480,7 +458,6 @@ class Connection : AutoCloseable {
         }
         LOGGER.trace { "shutdownHttpClient(): HTTPClient Shutdown End" }
     }
-
 
     private fun stopWebsocket(
         closeReason: CloseReason.Codes = CloseReason.Codes.NORMAL,
@@ -607,7 +584,6 @@ class Connection : AutoCloseable {
         LOGGER.trace { "runWebsocketWatcher: Ended" }
     }
 
-
     private suspend fun startWebsocketSession() {
         LOGGER.trace { "startWebsocketSession: Connecting: $connUri (${connUri.host}, ${connUri.port}, ${connUri.rawPath}?${connUri.rawQuery})" }
         check(httpClient?.isActive == true) { "HttpClient is not active" }
@@ -665,7 +641,6 @@ class Connection : AutoCloseable {
         }
 
     }
-
 
     /**
      * Receives Incoming Frames from Websocket [ReceiveChannel] as a flow, processes them,
@@ -727,7 +702,6 @@ class Connection : AutoCloseable {
             }
             .collect()
     }
-
 
     /**
      * Processes Received JSON Message, separating the channel prefix and deserializing to a [ResultMessage]
@@ -900,7 +874,6 @@ class Connection : AutoCloseable {
         }
     }
 
-
     private fun cleanupConnection() {
         LOGGER.trace { "cleanupConnection: activeLoop false" }
         connectionActive = false
@@ -908,7 +881,6 @@ class Connection : AutoCloseable {
         LOGGER.trace { "cleanupConnection: stopWebsocket()" }
         stopWebsocket()
     }
-
 
     @Synchronized
     override fun close() {
@@ -927,7 +899,6 @@ class Connection : AutoCloseable {
             LOGGER.debug { "Connection Closed" }
         }
     }
-
 
     /**
      * Send a message to the Veadotube Instance on this Connection
@@ -954,7 +925,6 @@ class Connection : AutoCloseable {
         }
     }
 
-
     /**
      * Send a message to the Veadotube Instance on this Connection
      *
@@ -978,7 +948,6 @@ class Connection : AutoCloseable {
         }
     }
 
-
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -992,7 +961,6 @@ class Connection : AutoCloseable {
         return true
     }
 
-
     override fun hashCode(): Int {
         var result = connectionTimeMillis.hashCode()
         result = 31 * result + id.hashCode()
@@ -1000,11 +968,9 @@ class Connection : AutoCloseable {
         return result
     }
 
-
     override fun toString(): String {
         return "Connection(instance=${instance.id}, id='$id', connectionTimeMillis=$connectionTimeMillis)"
     }
-
 }
 
 /**

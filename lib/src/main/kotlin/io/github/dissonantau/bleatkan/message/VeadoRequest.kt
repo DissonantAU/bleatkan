@@ -16,7 +16,6 @@ import io.github.dissonantau.bleatkan.message.RequestPayload.*
 class VeadoRequest {
 
     companion object FACTORY {
-
         /* Common Requests that can be reused - sometimes using lazy initialisation to only create when first accessed */
         /** Request of *event: info* - Should be sent to Instance Channel  */
         @JvmStatic
@@ -123,7 +122,6 @@ class VeadoRequest {
          *
          * @see createRequest
          * @see createPayload
-         *
          */
         @JvmStatic
         fun createSetStateMini(stateID: String) = createRequest(
@@ -146,7 +144,6 @@ class VeadoRequest {
          *
          * @see createRequest
          * @see createPayload
-         *
          */
         @JvmStatic
         fun createPushStateMini(stateID: String) = createRequest(
@@ -293,7 +290,6 @@ class VeadoRequest {
             payload = createPayload(event = PayloadEvent.THUMB, value = stateID)
         )
 
-
         /* Builder Functions */
         /**
          * Returns a Request that inherits [RequestMessage]
@@ -310,7 +306,6 @@ class VeadoRequest {
          * * Uses [type], [id], and [payload] must be provided
          * * All must be non-blank and non-null.
          * * (See [RequestPayload.RequestPayloadEventToken])
-         *
          *
          * @see [RequestPayload.RequestPayloadEvent]
          * @see [RequestPayload.RequestPayloadEventToken]
@@ -690,7 +685,6 @@ class VeadoRequest {
 
             return true
         }
-
     }
 
 }
