@@ -104,7 +104,6 @@ data class Instance(
 
     init {
         require(id.type.isNotEmpty()) { "InstanceID is not Valid" }
-        //require(server.isNotBlank()) { "serverAddress is blank" } // Instance server might be blank temporarily
         require(title.isNotBlank()) { "instanceName is blank" }
     }
 

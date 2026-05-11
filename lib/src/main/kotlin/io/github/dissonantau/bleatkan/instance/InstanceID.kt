@@ -162,11 +162,13 @@ class InstanceID : Comparable<InstanceID> {
         return result
     }
 
-    @Suppress("unused","MemberVisibilityCanBePrivate")
+    @Suppress("unused", "MemberVisibilityCanBePrivate")
     companion object {
-        /**
-         * String Format - Converts back to same format as instance file name
-         */
+        /** [type] value used for veado Mini */
+        const val TYPE_MINI = "mini"
+
+        /** [type] value used for veadotube (Full) */
+        const val TYPE_FULL = "veado"
 
         /** String Format - Converts back to same format as instance file name */
         const val FORMAT_STRING = "%s-%016x-%08x"

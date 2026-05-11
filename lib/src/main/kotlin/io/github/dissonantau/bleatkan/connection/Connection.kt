@@ -720,7 +720,7 @@ class Connection : AutoCloseable {
      */
     private fun convertMessage(textCleaned: String): ResultMessage {
         // Decode and Convert JSON to Object
-        LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: Attempting to decode JSON String to object:\n$textCleaned" }
+        //LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: Attempting to decode JSON String to object:\n$textCleaned" }
 
         val convertedMessage: ResultMessage =
             try {
