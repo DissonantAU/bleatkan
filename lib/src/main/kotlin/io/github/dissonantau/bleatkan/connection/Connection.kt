@@ -632,14 +632,14 @@ class Connection : AutoCloseable {
                 }
             }.buffer(5) // Buffer up to X Messages to Process
             .transform { messageBytes ->
-                LOGGER.trace { "WebsocketReceiverFlow: Parse ${messageBytes.hashCode()} to ApiMessage" }
+                LOGGER.trace { "WebsocketReceiverFlow: Parse ${messageBytes.contentHashCode()} to ApiMessage" }
                 // Process message, emit if successful
                 val processedMessage = processReceivedMessage(messageBytes)
                 if (processedMessage != null) {
-                    LOGGER.trace { "WebsocketReceiverFlow: Processed ${messageBytes.hashCode()} -> ApiMessage ${processedMessage.hashCode()}" }
+                    LOGGER.trace { "WebsocketReceiverFlow: Processed ${messageBytes.contentHashCode()} -> ApiMessage ${processedMessage.hashCode()}" }
                     emit(processedMessage)
                 } else {
-                    LOGGER.debug { "WebsocketReceiverFlow: Processed ${messageBytes.hashCode()} -> Received Null - Error likely" }
+                    LOGGER.debug { "WebsocketReceiverFlow: Processed ${messageBytes.contentHashCode()} -> Received Null - Error likely" }
                 }
             }.buffer(5) // Buffer up to X Messages to Pass
             //.flowOn(websocketContext)
@@ -659,7 +659,7 @@ class Connection : AutoCloseable {
      * Returns null if there's an error/unsupported message
      */
     private fun processReceivedMessage(message: ByteArray): ResultMessage? {
-        LOGGER.debug { "processReceivedMessage ${message.hashCode()}: ByteArray to Process: ${message.size} Bytes" }
+        LOGGER.debug { "processReceivedMessage ${message.contentHashCode()}: ByteArray to Process: ${message.size} Bytes" }
 
         /* Basic Decode Block Start */
         // Gets Index of first colon (':') - text before this should represent the Veadotube Channel
@@ -668,7 +668,7 @@ class Connection : AutoCloseable {
         // Checks Value of first Colon is eq or less than 0 and is before the first Curly Brace - if not, we don't have a valid channel value
         // Open Brace is in the 1st UTF-8 Block (only 1 Byte) to we can check it as a byte without decoding
         if (channelCharEnd <= 0 && channelCharEnd < message.indexOf(BRACE_OPEN_BYTE)) {
-            LOGGER.debug { "processReceivedMessage${message.hashCode()}: Received Message Missing '<channel>:'" }
+            LOGGER.debug { "processReceivedMessage${message.contentHashCode()}: Received Message Missing '<channel>:'" }
             return null
         } // not found, invalid message
 
@@ -678,15 +678,15 @@ class Connection : AutoCloseable {
         val channel = try {
             String(message, 0, channelCharEnd)
         } catch (ex: Exception) {
-            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error extracting Channel: ${ex.message}" }
+            LOGGER.debug { "processReceivedMessage ${message.contentHashCode()}: Error extracting Channel: ${ex.message}" }
             return null
         }
         if (channel.isBlank()) {
-            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Received Message with blank Channel name" }
+            LOGGER.debug { "processReceivedMessage ${message.contentHashCode()}: Received Message with blank Channel name" }
             return null
         } // not found, invalid message
 
-        LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Channel '$channel'" }
+        LOGGER.trace { "processReceivedMessage ${message.contentHashCode()}: Channel '$channel'" }
 
         // This is a workaround for pre version 2.1 which sometimes sends null bytes after the JSON - skip if Version 2
         val nullCharIndex =
@@ -695,10 +695,10 @@ class Connection : AutoCloseable {
 
         val textTrimIndex =
             if (nullCharIndex > 0) {
-                LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Culling Nulls after $nullCharIndex" }
+                LOGGER.trace { "processReceivedMessage ${message.contentHashCode()}: Culling Nulls after $nullCharIndex" }
                 nullCharIndex
             } else {
-                LOGGER.trace { "processReceivedMessage ${message.hashCode()}: No Nulls to Cull" }
+                LOGGER.trace { "processReceivedMessage ${message.contentHashCode()}: No Nulls to Cull" }
                 message.size
             }
 
@@ -706,22 +706,22 @@ class Connection : AutoCloseable {
         val textJsonExtracted = try {
             String(message, channelCharEnd + 1, textTrimIndex - (channelCharEnd + 1))
         } catch (ex: Exception) {
-            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error extracting JSON: ${ex.message}" }
+            LOGGER.debug { "processReceivedMessage ${message.contentHashCode()}: Error extracting JSON: ${ex.message}" }
             return null
         }
 
 
-        LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Final Processed Message:\nChannel: $channel\nJSON: $textJsonExtracted" }
+        LOGGER.trace { "processReceivedMessage ${message.contentHashCode()}: Final Processed Message:\nChannel: $channel\nJSON: $textJsonExtracted" }
         /* Basic Decode Block End */
 
         // Decode to Object
         val messageObj: ResultMessage = try {
             convertMessage(textJsonExtracted)
         } catch (ex: Exception) {
-            LOGGER.debug { "processReceivedMessage ${message.hashCode()}: Error Decoding JSON: ${ex.message}" }
+            LOGGER.debug { "processReceivedMessage ${message.contentHashCode()}: Error Decoding JSON: ${ex.message}" }
             return null
         }
-        LOGGER.trace { "processReceivedMessage ${message.hashCode()}: Decoded Message:\nVtResultMessage - ${messageObj.javaClass}\n$messageObj" }
+        LOGGER.trace { "processReceivedMessage ${message.contentHashCode()}: Decoded Message:\nVtResultMessage - ${messageObj.javaClass}\n$messageObj" }
 
         // Add channel to messageObj for use in Flow
         messageObj.channel = channel
