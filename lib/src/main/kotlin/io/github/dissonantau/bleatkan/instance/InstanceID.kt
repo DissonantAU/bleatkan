@@ -75,7 +75,6 @@ class InstanceID : Comparable<InstanceID> {
         var timestampTemp = -1L
         var processTemp = -1
 
-
         //Split String
         val parts = instanceID.split("-")
         //Test result
@@ -88,7 +87,6 @@ class InstanceID : Comparable<InstanceID> {
             require(false) { "Instance ID String Invalid: 2nd part is not valid Hex Value" }
         }
 
-
         // Try to Convert Process ID from Hex
         try {
             processTemp = parts[2].toInt(16) //Convert from Hex to int
@@ -96,10 +94,8 @@ class InstanceID : Comparable<InstanceID> {
             require(false) { "Instance ID String Invalid: 3rd part is not valid Hex Value" }
         }
 
-
         typeTemp = parts[0]
         require(typeTemp.isNotEmpty() && typeTemp.all { it.isLetter() }) { "Instance ID String Invalid: 1st part contains non-letter characters" }
-
 
         //Assign Values
         this.type = typeTemp
@@ -226,7 +222,6 @@ class InstanceID : Comparable<InstanceID> {
             require(instanceIdParts[1].length == 16) { "Instance ID String Invalid: 2nd part must be 16 Characters long" }
             require(instanceIdParts[2].length == 8) { "Instance ID String Invalid: 3nd part must be 8 Characters long" }
             require(instanceIdParts[0].isNotBlank()) { "Instance ID String Invalid: 1nd part must not be blank" }
-
         }
 
         @JvmStatic

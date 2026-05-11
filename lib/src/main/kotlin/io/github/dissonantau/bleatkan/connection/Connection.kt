@@ -38,9 +38,7 @@ import io.github.dissonantau.bleatkan.message.*
 class Connection : AutoCloseable {
 
     companion object {
-
         private const val NULL_BYTE: Byte = 0
-
         private const val COLON_BYTE = ':'.code.toByte()
         private const val BRACE_OPEN_BYTE = '{'.code.toByte()
 
@@ -207,7 +205,6 @@ class Connection : AutoCloseable {
             throw ex
         }
 
-
         LOGGER.trace { "Connection Websocket Target: $connUri" }
 
         id = connUri.toString()
@@ -220,7 +217,6 @@ class Connection : AutoCloseable {
         }
 
         setupHttpClient()
-
         connectionActive = true
 
         /* Coroutine setup and Launch */
@@ -237,7 +233,6 @@ class Connection : AutoCloseable {
         )
 
         websocketJobContext = connectionJob + websocketContext
-
         websocketScope = CoroutineScope(websocketJobContext)
 
         LOGGER.trace { "Connection Constructor: Launch runWebsocketReceive() in $websocketScope" }
@@ -248,7 +243,6 @@ class Connection : AutoCloseable {
         }
 
         LOGGER.trace { "Connection Constructor: Done" }
-
     }
 
     /**
@@ -324,7 +318,6 @@ class Connection : AutoCloseable {
             throw ex
         }
 
-
         LOGGER.trace { "Connection Websocket Target: $connUri" }
 
         id = connUri.toString()
@@ -337,7 +330,6 @@ class Connection : AutoCloseable {
         }
 
         //setupHttpClient() // Testing - Skipped
-
         connectionActive = true
 
         /* Coroutine setup and Launch */
@@ -355,9 +347,7 @@ class Connection : AutoCloseable {
         )
 
         websocketJobContext = connectionJob + websocketContext
-
         websocketScope = CoroutineScope(websocketJobContext)
-
 
         // Testing - Mock Session
         webSocketSession = mockWebSocketSession
@@ -370,14 +360,12 @@ class Connection : AutoCloseable {
         }
 
         LOGGER.trace { "Connection Constructor: Done" }
-
     }
 
     private fun setupHttpClient() {
         LOGGER.trace { "Connection Constructor: HTTPClient Creation Start" }
 
         runBlocking {
-
             // Lock to prevent Concurrent Creation/Destruction
             httpClientMutex.withLock(this) {
                 // Run If HTTP Client is active
@@ -405,13 +393,10 @@ class Connection : AutoCloseable {
                             level = if (LOGGER.isDebugEnabled()) LogLevel.INFO else LogLevel.NONE
                         }
                     }
-
                     LOGGER.trace { "Connection Constructor: httpClient created" }
                 }
             }
-
         }
-
         LOGGER.trace { "Connection Constructor: HTTPClient Creation End" }
     }
 
@@ -469,14 +454,11 @@ class Connection : AutoCloseable {
 
     private suspend fun runWebsocketWatcher() {
         LOGGER.trace { "runWebsocketWatcher: Begin" }
-
         var closeReason: CloseReason? = null
 
         try {
-
             /* Start Websocket Block */
             try {
-
                 try {
                     LOGGER.trace { "runWebsocketWatcher: Launch startWebsocketSession" }
                     startWebsocketSession()
@@ -489,48 +471,39 @@ class Connection : AutoCloseable {
 
             } catch (ex: CancellationException) {
                 // CancellationException - Upstream Job is being closed, we should quit
-                LOGGER.trace { "runWebsocketWatcher: startWebsocketSession was cancelled" }
                 connectionActive = false
             } catch (ex: Exception) {
                 val cancel: Boolean
-
                 when (ex) {
                     is ConnectException -> {
                         LOGGER.debug { "runWebsocketWatcher: Error connecting to $connUri - Invalid Server or Name, or Server is not available" }
                         cancel = connectionListener.onConnectionError(this, ConnectionError.FailedToConnect, ex)
                     }
-
                     is IllegalStateException -> {
                         LOGGER.warn { "runWebsocketWatcher: Error connecting to $connUri - Illegal State: ${ex.message}" }
                         cancel = connectionListener.onConnectionError(this, ConnectionError.IllegalState, ex)
                     }
-
                     else -> {
                         LOGGER.debug { "runWebsocketWatcher: Connection Error with $connUri" }
                         cancel = connectionListener.onConnectionError(this, ConnectionError.Unknown, ex)
                     }
                 }
-
                 if (cancel) {
                     // Deactivate loop if told to cancel by onConnectionError
                     LOGGER.debug { "runWebsocketWatcher: onConnectionError returned true - cancelling connection" }
                     connectionActive = false
                 }
-
             } finally {
-
                 // If connection not told to close or closing gracefully
                 when (closeReason?.knownReason) {
                     null -> {
                         LOGGER.debug { "runWebsocketWatcher: Closed Abnormally" }
                     }
-
                     CloseReason.Codes.NORMAL, CloseReason.Codes.GOING_AWAY -> {
                         //Normal Close
                         LOGGER.debug { "runWebsocketWatcher: startWebsocket was closed normally" }
                         connectionActive = false
                     }
-
                     CloseReason.Codes.byCode(1006) -> {
                         // Closed Abnormally - Happens when Veadotube Mini Closes - we don't seem to get a close frame, or KTOR Hides it and give us this
                         if (compatibilityFlagMiniPre2dot1) {
@@ -538,10 +511,8 @@ class Connection : AutoCloseable {
                         } else {
                             LOGGER.error { "runWebsocketWatcher: Closed Abnormally > Connection was closed without close frame - veadotube may have crashed" }
                         }
-
                         // Wait one Instance Manager Loop - If the Instance Closed/Crashed This connection should be cleaned up in around this time
                         delay(READ_LOOP_DELAY_MAX_MS - WS_CONN_ERROR_WAIT_MS)
-
                         // If connectionActive is still true
                         if (!connectionActive)
                             connectionListener.onConnectionError(this, ConnectionError.MiniV2DotOneConnectionError)
@@ -551,7 +522,6 @@ class Connection : AutoCloseable {
                         LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > $closeReason" }
                     }
                 }
-
             }
 
             /* End Websocket Block */
@@ -623,7 +593,6 @@ class Connection : AutoCloseable {
             webSocketSession = null
             LOGGER.trace { "startWebsocketSession: Disconnected: $connUri" }
         }
-
     }
 
     /**
@@ -660,7 +629,6 @@ class Connection : AutoCloseable {
                         LOGGER.trace { "WebsocketReceiverFlow: ${frame.frameType} Frame with ${frame.data.size} Bytes" }
                         emit(messageBytes)
                     }
-
                     else -> {
                         // Should never happen without Raw Socket
                         LOGGER.debug { "WebsocketReceiverFlow: Received unexpected Frame - ${frame.frameType} Frame with ${frame.data.size} Bytes" }
