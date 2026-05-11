@@ -44,31 +44,21 @@ class Connection : AutoCloseable {
         private const val COLON_BYTE = ':'.code.toByte()
         private const val BRACE_OPEN_BYTE = '{'.code.toByte()
 
-        /**
-         * Compares by Instance Title Length, then Instance Start Timestamp
-         */
+        /** Compares by Instance Title Length, then Instance Start Timestamp */
         val COMPARATOR_CONNECTION_BY_INSTANCE_TITLE_LENGTH_TIMESTAMP: Comparator<Connection> =
             compareBy({ it.instance.title.length }, { it.instance.id.timestamp })
 
-        /**
-         * Maximum Connection Errors in a row before giving up and
-         */
+        /** Maximum Connection Errors in a row before giving up and */
         private const val WS_CONN_ERROR_MAX: Int = 5
 
-        /**
-         * Wait timer after connection error
-         */
+        /** Wait timer after connection error */
         private const val WS_CONN_ERROR_WAIT_MS: Long = 500
 
-        /**
-         * Coroutine Supervisor Job - Parent of all jobs (if none provided on construction) and can be used to cancel all Connections
-         */
+        /** Coroutine Supervisor Job - Parent of all jobs (if none provided on construction) and can be used to cancel all Connections */
         @JvmStatic
         private val connectionDefaultJobParent by lazy { SupervisorJob() }
 
-        /**
-         * JSON De/serializer
-         */
+        /** JSON De/serializer */
         private val jsonDeserializer = Json {
             ignoreUnknownKeys = true
             useAlternativeNames = false
@@ -91,19 +81,13 @@ class Connection : AutoCloseable {
 
     }
 
-    /**
-     * ConnectionListener that will receive Events
-     */
+    /** ConnectionListener that will receive Events */
     private val connectionListener: ConnectionListener
 
-    /**
-     * Instance this Connection is connected to
-     */
+    /** Instance this Connection is connected to */
     val instance: Instance
 
-    /**
-     * Server this Connection is connected to
-     */
+    /** Server this Connection is connected to */
     val server: String
 
     /**
