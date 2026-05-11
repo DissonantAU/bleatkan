@@ -774,38 +774,10 @@ class Connection : AutoCloseable {
                 throw exception
             }
 
-
-        // If Decode failed, throw should have exited
-        if (LOGGER.isTraceEnabled()) {
-            // Trace is Enabled, process block to output info (Skip if not)
-            LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Event: " + convertedMessage.event }
-            if (convertedMessage is ResultMessage.ResultMessageWithNodeEntryList) {
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessageEntries" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries: ${convertedMessage.entries}" }
-                for (entry in convertedMessage.entries) {
-                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Entries -> Entry: $entry" }
-                }
-            } else if (convertedMessage is ResultMessage.ResultMessageWithPayload) {
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Class: VtResultMessagePayload" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> ID: ${convertedMessage.id}" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Type: ${convertedMessage.type}" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Name: ${convertedMessage.name}" }
-
-                if (convertedMessage.payload is ResultPayload.ResultPayloadStateList) {
-                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${convertedMessage.payload.event}" }
-
-                    for (state in convertedMessage.payload.states) {
-                        LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> States -> State: $state" }
-                    }
-                } else if (convertedMessage.payload is ResultPayload.ResultPayloadState) {
-                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> Event: ${convertedMessage.payload.event}" }
-                    LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Payload -> State: ${convertedMessage.payload.state}" }
-                }
-
-            } else {
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Unknown Message Class: ${convertedMessage.javaClass}" }
-                LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: -> Contents: $convertedMessage" }
-            }
+        LOGGER.trace { // If Trace is Enabled, process block to output info
+            convertedMessage.printTraceResultMessage {
+                StringBuilder().appendLine("convertMessage ${textCleaned.hashCode()}: ")
+            }.toString().trimEnd('\n')
         }
 
         LOGGER.trace { "convertMessage ${textCleaned.hashCode()}: Decoded JSON String to:\n$convertedMessage" }
@@ -813,6 +785,68 @@ class Connection : AutoCloseable {
         return convertedMessage
     }
 
+    private inline fun ResultMessage.printTraceResultMessage(initialMessageSB: () -> StringBuilder = { StringBuilder() }): StringBuilder {
+        val message = this
+        val messageStringBuilder = initialMessageSB()
+        messageStringBuilder.appendLine("-> Event: " + message.event)
+        @Suppress("REDUNDANT_ELSE_IN_WHEN")
+        when (message) {
+            is ResultMessage.ResultMessageWithNodeEntryList -> {
+                messageStringBuilder.appendLine("-> Class: ResultMessageWithNodeEntryList;")
+                messageStringBuilder.appendLine("-> Entries: ${message.entries};")
+                message.entries.forEach { entry ->
+                    messageStringBuilder.appendLine("-> Entries -> Entry: $entry;")
+                }
+            }
+            is ResultMessage.ResultMessageWithPayload -> {
+                messageStringBuilder.appendLine("-> Class: ResultMessageWithPayload;")
+                messageStringBuilder.appendLine("-> ID:   ${message.id};")
+                messageStringBuilder.appendLine("-> Type: ${message.type};")
+                messageStringBuilder.appendLine("-> Name: ${message.name};")
+
+                if (message.payload is ResultPayload.ResultPayloadStateList) {
+                    messageStringBuilder.appendLine("-> Payload -> Event: ${message.payload.event};")
+                    message.payload.states.forEach { state ->
+                        messageStringBuilder.appendLine("-> Payload -> States -> State: $state;")
+                    }
+                } else if (message.payload is ResultPayload.ResultPayloadState) {
+                    messageStringBuilder.appendLine("-> Payload -> Event: ${message.payload.event};")
+                    messageStringBuilder.appendLine("-> Payload -> State: ${message.payload.state};")
+                }
+            }
+            is ResultMessage.ResultMessageWithPayloadBoolean -> {
+                messageStringBuilder.appendLine("-> Class: ResultMessageWithPayloadBoolean;")
+                messageStringBuilder.appendLine("-> ID:    ${message.id};")
+                messageStringBuilder.appendLine("-> Type:  ${message.type};")
+                messageStringBuilder.appendLine("-> Name:  ${message.name};")
+                messageStringBuilder.appendLine("-> Payload: ${message.payload};")
+            }
+            is ResultMessage.ResultMessageWithPayloadNumber -> {
+                messageStringBuilder.appendLine("-> Class: ResultMessageWithPayloadNumber;")
+                messageStringBuilder.appendLine("-> ID:    ${message.id};")
+                messageStringBuilder.appendLine("-> Type:  ${message.type};")
+                messageStringBuilder.appendLine("-> Name:  ${message.name};")
+
+                messageStringBuilder.appendLine("-> Payload -> Value: ${message.payload.value};")
+                if (message.payload.isMaxSet)
+                    messageStringBuilder.appendLine("-> Payload -> Value: ${message.payload.max};")
+                if (message.payload.isMinSet)
+                    messageStringBuilder.appendLine("-> Payload -> Value: ${message.payload.min};")
+            }
+            is ResultMessage.ResultMessageWithInstanceInfo -> {
+                messageStringBuilder.appendLine("-> Class: ResultMessageWithInstanceInfo;")
+                messageStringBuilder.appendLine("-> ID:      ${message.id};")
+                messageStringBuilder.appendLine("-> Name:    ${message.name};")
+                messageStringBuilder.appendLine("-> Server:  ${message.server};")
+                messageStringBuilder.appendLine("-> Version: ${message.version};")
+            }
+            else -> {
+                messageStringBuilder.appendLine("-> Unknown Message Class: ${message.javaClass.name};")
+                messageStringBuilder.appendLine("-> Contents: $message")
+            }
+        }
+        return messageStringBuilder
+    }
 
     private fun passReceivedToListener(message: ResultMessage) {
         try {
