@@ -212,19 +212,11 @@ sealed class ResultPayload {
             return result
         }
 
-        /**
-         * Encodes PNG as Base64 Encoded String
-         * @return PNG encoded as a Base64 String
-         */
+        /** Returns PNG as a Base64 Encoded String */
         fun pngAsString(): String = png
 
-
-        /**
-         * Returns a copy of the PNG Byte Array
-         * @return PNG as a Byte Array
-         */
+        /** Returns PNG as a Byte Array (Decoded from Base64 String) */
         fun pngAsBytes(): ByteArray = png.decodeBase64Bytes()
-
 
         override fun toString(): String {
             // If received hash (2.1+)

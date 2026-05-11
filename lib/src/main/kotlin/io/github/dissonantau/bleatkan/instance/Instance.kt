@@ -52,9 +52,9 @@ data class Instance(
     /**
      * Server IP and Port separated with a colon (For example "127.0.0.1:12345")
      *
-     * Unlikely to change, but can if Server in Veadotube is changed during run.
+     * Can change if Websocket Server is enabled/disabled or settings are changed in veadotube during run.
      *
-     * In this case the connection will likely close, but may not fail until next request.
+     * In this case the connection will likely close, but may not fail until next request in some versions.
      * The instance file will update, but connections may need updating, closing, reopening, etc.
      *
      * This value will be updated when the Instance changes
@@ -70,7 +70,7 @@ data class Instance(
      */
     val version: String = "2.0",
 
-    /** Added with mini 2.1 */
+    /** Added with mini 2.1 - defaults to 'en' if not provided*/
     var language: String = "en"
 ) {
 
