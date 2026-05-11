@@ -164,7 +164,6 @@ class Connection : AutoCloseable {
     var isClosed = false
         private set
 
-
     /**
      * Represents a Connection to a Veadotube Instance.
      *
@@ -196,7 +195,6 @@ class Connection : AutoCloseable {
         this.instance = instance
         connectionListener = listener
 
-
         //Get URI
         try {
             connUri = instance.getWebSocketUri(this.name)
@@ -222,11 +220,10 @@ class Connection : AutoCloseable {
         /* Coroutine setup and Launch */
         connectionJob = SupervisorJob(connectionJobParent)
 
-        wsReceiveDispatcher =
-            Dispatchers.IO.limitedParallelism(
-                parallelism = websocketParallelism,
-                "connection-dsp-$server-${this.name.replace(' ', '~')}"
-            )
+        wsReceiveDispatcher = Dispatchers.IO.limitedParallelism(
+            parallelism = websocketParallelism,
+            "connection-dsp-$server-${this.name.replace(' ', '~')}"
+        )
 
         websocketContext = wsReceiveDispatcher + CoroutineName(
             "connection-cr_$server-${this.name.replace(' ', '~')}"
@@ -321,8 +318,7 @@ class Connection : AutoCloseable {
 
         // Compatibility flags
         if (instance.id.type == "mini" && instance.version == "2.0") {
-            //Compatibility flag for pre 2.1
-            compatibilityFlagMiniPre2dot1 = true
+            compatibilityFlagMiniPre2dot1 = true// Compatibility flag for pre 2.1
             LOGGER.debug { "API Compatibility Flag set: Mini Version 2" }
         }
 
@@ -332,12 +328,10 @@ class Connection : AutoCloseable {
         /* Coroutine setup and Launch */
         connectionJob = SupervisorJob(connectionDefaultJobParent)
 
-
-        wsReceiveDispatcher =
-            Dispatchers.IO.limitedParallelism(
-                parallelism = websocketParallelism,
-                "connection-dsp-$server-${this.name.replace(' ', '~')}"
-            )
+        wsReceiveDispatcher = Dispatchers.IO.limitedParallelism(
+            parallelism = websocketParallelism,
+            "connection-dsp-$server-${this.name.replace(' ', '~')}"
+        )
 
         websocketContext = wsReceiveDispatcher + CoroutineName(
             "connection-cr_$server-${this.name.replace(' ', '~')}"
@@ -464,10 +458,10 @@ class Connection : AutoCloseable {
                     closeReason = webSocketCloseReason?.await()
                     LOGGER.trace { "runWebsocketWatcher: Websocket Close Reason = $closeReason" }
                 }
-
-            } catch (ex: CancellationException) {
+            } catch (_: CancellationException) {
                 // CancellationException - Upstream Job is being closed, we should quit
                 connectionActive = false
+                LOGGER.trace { "runWebsocketWatcher: startWebsocketSession was cancelled" }
             } catch (ex: Exception) {
                 val cancel: Boolean
                 when (ex) {
@@ -513,21 +507,17 @@ class Connection : AutoCloseable {
                         if (!connectionActive)
                             connectionListener.onConnectionError(this, ConnectionError.MiniV2DotOneConnectionError)
                     }
-
-                    else -> {
-                        LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > $closeReason" }
-                    }
+                    else -> LOGGER.debug { "runWebsocketWatcher: Closed Abnormally > $closeReason" }
                 }
             }
 
             /* End Websocket Block */
 
-
-        } catch (ex: CancellationException) {
+        } catch (_: CancellationException) {
             // CancellationException - Upstream Job is being closed, we should quit (Mainly to catch a Cancelled Delay)
             LOGGER.trace { "runWebsocketWatcher: startWebsocket was cancelled" }
         } finally {
-            //Cleanup this Connection
+            // Cleanup this Connection
             cleanupConnection()
         }
 
@@ -546,18 +536,13 @@ class Connection : AutoCloseable {
 
         try {
             httpClient?.webSocket(
-                host = connUri.host,
-                port = connUri.port,
+                host = connUri.host, port = connUri.port,
                 path = "${connUri.rawPath}?${connUri.rawQuery}"
             ) {
-                /*Setup */
+                /* Setup */
                 LOGGER.trace { "webSocket Session Block: Connected" }
-
-                // Export WS Session for Send
-                webSocketSession = this
-
-                //Export WS CloseReason
-                webSocketCloseReason = this.closeReason
+                webSocketSession = this // Export WS Session for Send
+                webSocketCloseReason = this.closeReason // Export WS CloseReason
 
                 //Run Receiver
                 LOGGER.trace { "webSocket Session Block: Receiver Started" }
@@ -568,12 +553,10 @@ class Connection : AutoCloseable {
                     webSocketReceiverResult = ex
                     LOGGER.trace { "webSocket Session Block: Disconnected - Receiver Closed with Error" }
 
-                    if (ex !is Exception) {
-                        // Major Error - Throwable, not Exception
+                    if (ex !is Exception) { // Major Error - Throwable, not Exception
                         LOGGER.warn { "webSocket Session Block -> WebsocketReceiver Throwable: ${ex.message} - ${ex.cause}\n${ex.stackTraceToString()}" }
                         throw Exception("Major Error: Throwable ${ex.javaClass.simpleName}", ex)
-                    } else {
-                        //Regular Exception
+                    } else { // Regular Exception
                         LOGGER.debug { "webSocket Session Block -> WebsocketReceiver Exception: ${ex.message} - ${ex.cause}\n${ex.stackTraceToString()}" }
                         throw ex
                     }
@@ -583,9 +566,7 @@ class Connection : AutoCloseable {
                 webSocketReceiverResult = ex
                 throw ex
             }
-
-        } finally {
-            //Clear WS Session
+        } finally { // Clear WS Session
             webSocketSession = null
             LOGGER.trace { "startWebsocketSession: Disconnected: $connUri" }
         }
