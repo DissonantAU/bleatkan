@@ -335,7 +335,7 @@ class InstancesManager(
         LOGGER.trace { "notifyUpdateInstanceTitle: instance (${instance.id} updated title '${instance.title}' > '$newTitle'" }
         require(newTitle.isNotBlank())
 
-        runBlocking(instanceReaderDispatcher) {
+        runBlocking {
             LOGGER.trace { "notifyUpdateInstanceTitle: instancesMapMutex - Lock Waiting" }
 
             instancesMapMutex.withLock {
