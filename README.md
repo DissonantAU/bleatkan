@@ -6,14 +6,15 @@ Originally Created alongside the Touch Portal Veadotube Plugin, referencing the 
 ---
 
 ## Releases
-The latest version is 0.6.0 and currently a beta release.  
+The latest version is 0.8.3 and currently a beta release.  
 
 
 - Very much a Work in Progress - stable enough for general use but hasn't been fully tested.
-- Tested with Veadotube Mini v2.0a & v2.1 Beta
-- Future Releases and the release of Veadotube (e.g. Full) will likely require updates, if not breaking changes.
+- Tested with
+  - **veadotube mini v2.0a**, **v2.1**, & **v2.2**
+  - **veadotube v0.6**
+- Future Releases may require updates, if not breaking changes.
 - The Major Version will be bumped for any breaking changes
-
 
 
 ## Goals
