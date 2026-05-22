@@ -16,8 +16,8 @@ plugins {
 
 /* Version */
 val versionMajor: Int = 0
-val versionMinor: Int = 7
-val versionPatch: Int = 1
+val versionMinor: Int = 8
+val versionPatch: Int = 3
 
 
 group = "io.github.dissonantau"

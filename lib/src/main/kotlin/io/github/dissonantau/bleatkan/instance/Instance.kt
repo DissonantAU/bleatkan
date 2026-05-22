@@ -1,12 +1,12 @@
 package io.github.dissonantau.bleatkan.instance
 
-
 import io.github.dissonantau.bleatkan.connection.Connection
 import io.github.dissonantau.bleatkan.connection.ConnectionListener
 import java.net.URI
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-
+import java.util.Comparator
+import kotlin.jvm.Throws
 
 /**
  * Represents an Instance
@@ -44,27 +44,34 @@ data class Instance(
      *
      * In this case the connection may close, or may not fail until next request
      * The instance file will update, but connections may need updating, closing, reopening, etc.
+     *
+     * This value will be updated when the Instance changes
      */
     var title: String,
 
     /**
      * Server IP and Port separated with a colon (For example "127.0.0.1:12345")
      *
-     * Unlikely to change, but can if Server in Veadotube is changed during run.
+     * Can change if Websocket Server is enabled/disabled or settings are changed in veadotube during run.
      *
-     * In this case the connection will likely close, but may not fail until next request.
+     * In this case the connection will likely close, but may not fail until next request in some versions.
      * The instance file will update, but connections may need updating, closing, reopening, etc.
+     *
+     * This value will be updated when the Instance changes
      */
-    val server: String,
+    var server: String = "",
 
     /**
      * Instance Version (For example "2.1")
      *
-     * This was added in mini version 2.1 - if none is found, we assume it's v2.0
+     * This was added in mini version 2.1 - if none is found, we assume it's 2.0
      *
      * For Comparable Version, use [instanceVersion]
      */
     val version: String = "2.0",
+
+    /** Added with mini 2.1 - defaults to 'en' if not provided*/
+    var language: String = "en"
 ) {
 
     /**
@@ -90,26 +97,24 @@ data class Instance(
      * A new Instance created with the same inputs would have the same instanceConnectionID
      */
     val instanceConnectionID: String
+        get() {
+            return "${id}-$server-$title"
+        }
 
 
     init {
         require(id.type.isNotEmpty()) { "InstanceID is not Valid" }
-        require(server.isNotBlank()) { "serverAddress is blank" }
         require(title.isNotBlank()) { "instanceName is blank" }
-
-        instanceConnectionID = "${id}-$server-$title"
     }
 
     @JvmOverloads
     constructor(
-        id: InstanceID, name: String, server: String,
-        version: String = "2.0",
+        id: InstanceID, name: String, server: String = "",
+        version: String = "2.0", language: String = "en",
         lastModified: Long
     ) : this(
-        id = id,
-        title = name,
-        server = server,
-        version = version
+        id = id, title = name, server = server,
+        version = version, language = language
     ) {
         fileLastModified = lastModified
     }
@@ -119,10 +124,13 @@ data class Instance(
      *
      * It's recommended to provide a connection name to better identify the connection in Veadotube logs
      *
-     * @return URI for Instance with the default connection name attached. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=veadotube%20mini-123456789")
+     * @return URI for Instance with the default connection name attached. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=bleatkan-123456789")
      */
-    fun getWebSocketUri(): URI =
-        getWebSocketUri(server, "$title-${System.currentTimeMillis()}")
+    @Throws(IllegalStateException::class)
+    fun getWebSocketUri(): URI {
+        check(server.isNotBlank()) { "Server can not be blank" }
+        return generateWebSocketUri(server, "bleatkan-$id-${System.currentTimeMillis()}")
+    }
 
 
     /**
@@ -131,8 +139,12 @@ data class Instance(
      * @param connectionName Name of Connection - this will appear in the Veadotube Logs (e.g. "api ab1234" > "?n=api%20ab1234")
      * @return URI for Instance & Client. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=connection%20name")
      */
-    fun getWebSocketUri(connectionName: String): URI =
-        getWebSocketUri(server, connectionName)
+    @Throws(IllegalArgumentException::class, IllegalStateException::class)
+    fun getWebSocketUri(connectionName: String): URI {
+        check(server.isNotBlank()) { "Server can not be blank" }
+        require(connectionName.isNotBlank()) { "Name can not be blank" }
+        return generateWebSocketUri(server, connectionName)
+    }
 
 
     /**
@@ -141,16 +153,40 @@ data class Instance(
      * Equivalent of Connection(instance (this), receiver)
      *
      * @param listener Object to be sent events by Connection Object
-     * @param connectionName [String] Name used with Websocket to Identify Connection in Veadotube Logs - defaults to `"bleatkan-instance-${System.currentTimeMillis()}"` if not provided.
+     * @param connectionName [String] Name used with Websocket to Identify Connection in Veadotube Logs - defaults to `"bleatkan-${System.currentTimeMillis()}"` if not provided.
      * @return Connection
      */
-    fun connect(listener: ConnectionListener,connectionName:String = "bleatkan-instance-${System.currentTimeMillis()}"): Connection {
+    fun connect(
+        listener: ConnectionListener,
+        connectionName: String = "bleatkan-${System.currentTimeMillis()}"
+    ): Connection {
         return Connection(instance = this, listener = listener, connectionName = connectionName)
+    }
+
+    /**
+     * Gets the Title with the Application Title (up to first dash) and any Whitespace Trimmed off
+     *
+     * Examples:
+     * - "veadotube mini" = "" (Blank String)
+     * - "veadotube mini - main" = "main"
+     *
+     * @param alternateResult [String] to return if there's nothing other than the default application title. Blank String by default
+     * @return [String] Trimmed Title - or [alternateResult]
+     */
+    @JvmOverloads
+    inline fun getTitleTrimmed(alternateResult: () -> String = { "" }): String {
+        val firstDash = title.indexOf('-')
+        return if (firstDash >= 0) {
+            title.substring(firstDash + 1).trim()
+        } else {
+            alternateResult()
+        }
     }
 
     companion object {
         /**
          * Returns the URI for the given Client Name on this Instance
+         *
          * This is one-to-one for Veadotube Mini
          *
          * @param server Server IP and Port separated with a colon (e.g. "127.0.0.1:12345")
@@ -158,13 +194,31 @@ data class Instance(
          * @return URI for Instance & Client. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=connection%20name")
          */
         @JvmStatic
+        @Throws(IllegalArgumentException::class)
         fun getWebSocketUri(server: String, connectionName: String): URI {
-            require(server.isNotBlank()) { "Server can not be empty or blank" }
-            require(connectionName.isNotBlank()) { "Name can not be empty or blank" }
+            require(server.isNotBlank()) { "Server can not be blank" }
+            require(connectionName.isNotBlank()) { "Name can not be blank" }
 
+            return generateWebSocketUri(server, connectionName)
+        }
+
+        /**
+         * Generates and Returns the URI for the given Client Name on this Instance
+         *
+         * Internal with no checks on inputs - make sure server & connectionName are not blank
+         *
+         * @param server Server IP and Port separated with a colon (e.g. "127.0.0.1:12345")
+         * @param connectionName Name of Connection - this will appear in the Veadotube Logs (e.g. "api ab1234" > "?n=api%20ab1234")
+         * @return URI for Instance & Client. Characters encoded as needed (e.g. "ws://127.0.0.1:12345?n=connection%20name")
+         */
+        @Throws(IllegalArgumentException::class)
+        private fun generateWebSocketUri(server: String, connectionName: String): URI {
             val encodedName = URLEncoder.encode(connectionName, StandardCharsets.UTF_8.toString())
             return URI("ws://$server?n=$encodedName")
-
         }
+
+        val COMPARATOR_INSTANCE_BY_ID: Comparator<Instance> = compareBy { it.id.timestamp }
+
+        val COMPARATOR_INSTANCE_BY_TITLE_LENGTH: Comparator<Instance> = compareBy { it.title.length }
     }
 }

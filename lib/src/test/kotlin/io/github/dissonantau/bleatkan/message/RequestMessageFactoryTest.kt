@@ -86,7 +86,7 @@ class RequestMessageFactoryTest {
             VeadoRequest.createRequest(
                 event = MessageEvent.LIST,
                 type = MessagePayloadType.STATE_EVENTS,
-                id = MessagePayloadId.MINI,
+                id = MessagePayloadId.MINI.formattedName,
                 payload = VeadoRequest.getPayloadEventList
             )
         val reqChannelListExpectedObj2Text = reqChannelListExpectedObj2.toJsonString()
@@ -110,7 +110,7 @@ class RequestMessageFactoryTest {
             VeadoRequest.createRequest(
                 event = MessageEvent.PAYLOAD,
                 type = MessagePayloadType.STATE_EVENTS,
-                id = MessagePayloadId.MINI,
+                id = MessagePayloadId.MINI.formattedName,
                 payload = VeadoRequest.getPayloadEventList
             )
         val reqEventsListObjText = reqEventsListObj.toJsonString()
@@ -130,7 +130,7 @@ class RequestMessageFactoryTest {
             VeadoRequest.createRequest(
                 event = MessageEvent.PAYLOAD,
                 type = MessagePayloadType.STATE_EVENTS,
-                id = MessagePayloadId.MINI,
+                id = MessagePayloadId.MINI.formattedName,
                 payload = VeadoRequest.getPayloadEventPeek
             )
         val reqEventsPeekText = reqEventsPeekObj.toJsonString()
@@ -148,7 +148,7 @@ class RequestMessageFactoryTest {
             VeadoRequest.createRequest(
                 event = MessageEvent.PAYLOAD,
                 type = MessagePayloadType.STATE_EVENTS,
-                id = MessagePayloadId.MINI,
+                id = MessagePayloadId.MINI.formattedName,
                 payload = VeadoRequest.createPayload(event = PayloadEvent.SET, value = "BF")
             )
         val reqEventsSetStateExpectedObjText = reqEventsSetStateExpectedObj.toJsonString()
@@ -166,7 +166,7 @@ class RequestMessageFactoryTest {
             VeadoRequest.createRequest(
                 event = MessageEvent.PAYLOAD,
                 type = MessagePayloadType.STATE_EVENTS,
-                id = MessagePayloadId.MINI,
+                id = MessagePayloadId.MINI.formattedName,
                 payload = VeadoRequest.createPayload(event = PayloadEvent.PUSH, value = "26")
             )
         val reqEventsPushStateObjText = reqEventsPushStateObj.toJsonString()
@@ -185,7 +185,7 @@ class RequestMessageFactoryTest {
             VeadoRequest.createRequest(
                 event = MessageEvent.PAYLOAD,
                 type = MessagePayloadType.STATE_EVENTS,
-                id = MessagePayloadId.MINI,
+                id = MessagePayloadId.MINI.formattedName,
                 payload = VeadoRequest.createPayload(event = PayloadEvent.POP, value = "26")
             )
         val reqEventsPopStateObjText = reqEventsPopStateObj.toJsonString()
@@ -203,7 +203,7 @@ class RequestMessageFactoryTest {
             VeadoRequest.createRequest(
                 event = MessageEvent.PAYLOAD,
                 type = MessagePayloadType.STATE_EVENTS,
-                id = MessagePayloadId.MINI,
+                id = MessagePayloadId.MINI.formattedName,
                 payload = VeadoRequest.createPayload(event = PayloadEvent.THUMB, value = "3")
             )
         val reqEventsRequestThumbAvatarObjText = reqEventsRequestThumbAvatarObj.toJsonString()
@@ -221,7 +221,7 @@ class RequestMessageFactoryTest {
             VeadoRequest.createRequest(
                 event = MessageEvent.PAYLOAD,
                 type = MessagePayloadType.STATE_EVENTS,
-                id = MessagePayloadId.MINI,
+                id = MessagePayloadId.MINI.formattedName,
                 payload = VeadoRequest.createPayload(event = PayloadEvent.LISTEN, value = "mini.changestate")
             )
         val reqEventsRequestListenObjText = reqEventsRequestListenObj.toJsonString()
@@ -238,7 +238,7 @@ class RequestMessageFactoryTest {
             VeadoRequest.createRequest(
                 event = MessageEvent.PAYLOAD,
                 type = MessagePayloadType.STATE_EVENTS,
-                id = MessagePayloadId.MINI,
+                id = MessagePayloadId.MINI.formattedName,
                 payload = VeadoRequest.createPayload(event = PayloadEvent.UNLISTEN, value = "mini.changestate")
             )
         val reqEventsRequestUnlistenObjText = reqEventsRequestUnlistenObj.toJsonString()

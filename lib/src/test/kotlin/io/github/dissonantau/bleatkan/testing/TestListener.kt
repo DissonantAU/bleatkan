@@ -25,8 +25,8 @@ class TestListener : InstancesListener, ConnectionListener {
 
     /* Instances Manager Events */
 
-    override fun onInstanceStart(instance: Instance) {
-        logger.debug { "TestReceiver: onInstanceStart '${instance}'" }
+    override fun onInstanceServerStart(instance: Instance) {
+        logger.debug { "TestReceiver: onInstanceServerStart '${instance}'" }
         instanceMap[instance.id] = instance
 
         //Create a connection
@@ -53,8 +53,16 @@ class TestListener : InstancesListener, ConnectionListener {
         logger.debug { "TestReceiver: onInstanceChangeMajor > instance: ${instance}, change: $change, oldValue: $oldValue" }
     }
 
-    override fun onInstanceEnd(id: InstanceID) {
-        logger.debug { "TestReceiver: onInstanceEnd '${id}'" }
+    override fun onInstanceOpen(instance: Instance) {
+        logger.debug { "TestReceiver: onInstanceOpen > instance: $instance" }
+    }
+
+    override fun onInstanceServerStop(instance: Instance) {
+        logger.debug { "TestReceiver: onInstanceServerStop > instance: $instance" }
+    }
+
+    override fun onInstanceClose(id: InstanceID) {
+        logger.debug { "TestReceiver: onInstanceClose '${id}'" }
         val closingInstance = instanceMap.remove(id)
         val closingConnection = connectionMap.remove(closingInstance)
         closingConnection?.close()

@@ -3,31 +3,29 @@
 
 package io.github.dissonantau.bleatkan.message
 
-
 import io.ktor.util.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.JsonClassDiscriminator
-
 
 /**
  * Result Message
  *
  * Generic Class - not used directly
  *
- * @see ResultMessageWithEntryList
- * @see ResultMessageWithEntryList
+ * @see ResultMessageWithNodeEntryList
  */
-@Serializable//(ResultMessageDeserializer::class)
-@JsonClassDiscriminator("event")
+@Serializable(ResultMessageDeserializer::class)
+//@JsonClassDiscriminator("event")
 sealed class ResultMessage {
-    //e.g. Current State, List of States, State Thumbnail
+    /** Request Contents e.g. Payload
+     *
+     * @see [MessageEvent]
+     */
     abstract val event: String
 
-    /**
-     * Result Message with a Payload
-     */
+    /** Result Message with a Payload */
     @Serializable
-    @SerialName("payload")
+    //@SerialName("payload")
     data class ResultMessageWithPayload(
         override val event: String,
         /** Type - e.g. stateEvents */
@@ -40,12 +38,44 @@ sealed class ResultMessage {
         val payload: ResultPayload
     ) : ResultMessage()
 
+    /** Result Message with Number Payload */
+    @Serializable
+    //@SerialName("payload") //type number
+    data class ResultMessageWithPayloadNumber(
+        override val event: String,
+        /** Type - e.g. number */
+        val type: String,
+        /** ID - e.g. mini */
+        val id: String,
+        /** Name - e.g. avatar state */
+        val name: String,
+        /** Payload - e.g. Current Value */
+        val payload: ResultPayloadSpecialNumber
+    ) : ResultMessage()
+
     /**
-     * Result Message with a List of Entries
+     * Result Message with Boolean Payload
+     *
+     * See https://veado.tube/docs/tech/api/nodes/#boolean
      */
     @Serializable
-    @SerialName("list")
-    data class ResultMessageWithEntryList(
+    //@SerialName("payload")//type boolean
+    data class ResultMessageWithPayloadBoolean(
+        override val event: String,
+        /** Type - e.g. boolean */
+        val type: String,
+        /** ID - e.g. mini */
+        val id: String,
+        /** Name - e.g. avatar state */
+        val name: String,
+        /** Payload - e.g. Current Value */
+        val payload: Boolean
+    ) : ResultMessage()
+
+    /** Result Message with a List of Entries */
+    @Serializable
+    //@SerialName("list")
+    data class ResultMessageWithNodeEntryList(
         override val event: String,
         val entries: List<Entry>
     ) : ResultMessage()
@@ -56,7 +86,7 @@ sealed class ResultMessage {
      * This was added to API in mini version 2.1
      */
     @Serializable
-    @SerialName("info")
+    //@SerialName("info")
     data class ResultMessageWithInstanceInfo(
         override val event: String,
         /** Instance ID
@@ -66,11 +96,23 @@ sealed class ResultMessage {
         val id: String,
         /** Instance Server address - *IP:Port* */
         val server: String,
-        /** Instance name/title */
-        val name: String,
+        /** Instance name/title
+         *
+         * Called 'name' in JSON and API Documentation but called 'title' here for clarity in code
+         */
+        @SerialName("name")
+        val title: String,
         /** Instance Version - "2.1a" */
         val version: String,
-        ) : ResultMessage()
+    ) : ResultMessage() {
+        /**
+         * Instance name/title
+         *
+         * Convenience getter for [title] to avoid confusion when comparing to Official API Documentation
+         */
+        val name: String
+            get() = title
+    }
 
     /**
      * Channel message was received from
@@ -82,7 +124,6 @@ sealed class ResultMessage {
     @Transient
     var channel: String = ""
         internal set
-
 }
 
 /**
@@ -96,7 +137,7 @@ sealed class ResultMessage {
  * @see ResultPayloadStateList
  * @see ResultPayloadPng
  */
-@Serializable//(ResultPayloadDeserializer::class)
+@Serializable //(ResultPayloadDeserializer::class)
 @JsonClassDiscriminator("event")
 sealed class ResultPayload {
     abstract val event: String
@@ -123,13 +164,9 @@ sealed class ResultPayload {
     data class ResultPayloadPng(
         override val event: String,
         val state: String,
-        /**
-         * PNG Width in Pixels
-         */
+        /** PNG Width in Pixels */
         val width: Int,
-        /**
-         * PNG Height in Pixels
-         */
+        /** PNG Height in Pixels */
         val height: Int,
         /**
          * PNG Encoded as a Base64 Encoded String
@@ -143,11 +180,9 @@ sealed class ResultPayload {
          * Added 2.1, can be used to identify changes to State Thumbnail (e.g. to clear cached thumbnails when a state is changed)
          *
          * Consistent during the lifetime of a single run, but not across restarts
-         *
          */
         val hash: String? = null,
     ) : ResultPayload() {
-
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -174,29 +209,42 @@ sealed class ResultPayload {
             return result
         }
 
-        /**
-         * Encodes PNG as Base64 Encoded String
-         * @return PNG encoded as a Base64 String
-         */
+        /** Returns PNG as a Base64 Encoded String */
         fun pngAsString(): String = png
 
-
-        /**
-         * Returns a copy of the PNG Byte Array
-         * @return PNG as a Byte Array
-         */
+        /** Returns PNG as a Byte Array (Decoded from Base64 String) */
         fun pngAsBytes(): ByteArray = png.decodeBase64Bytes()
-
 
         override fun toString(): String {
             // If received hash (2.1+)
-            if (hash!=null) return "ResultPayloadPng(event='$event', state='$state', width=$width, height=$height, hash=$hash, png={hashCode:${png.hashCode()}, count=${png.count()}})"
+            if (hash != null) return "ResultPayloadPng(event='$event', state='$state', width=$width, height=$height, hash=$hash, png={hashCode:${png.hashCode()}, count=${png.count()}})"
             // If not (2.0/a)
             return "ResultPayloadPng(event='$event', state='$state', width=$width, height=$height, png={hashCode:${png.hashCode()}, count=${png.count()}})"
         }
     }
 }
 
+/**
+ * Payload with Number Value/Min/Max
+ *
+ * If Min/Max weren't defined in the payload:
+ * - min = [Double.NEGATIVE_INFINITY]
+ * - max = [Double.POSITIVE_INFINITY]
+ *
+ * More Info https://veado.tube/docs/tech/api/nodes/#number
+ */
+@Serializable
+data class ResultPayloadSpecialNumber(
+    val value: Double,
+    val min: Double = Double.NEGATIVE_INFINITY,
+    val max: Double = Double.POSITIVE_INFINITY
+) {
+    val isMinSet
+        get() = min.isFinite()
+
+    val isMaxSet
+        get() = max.isFinite()
+}
 
 @Serializable
 data class State(
@@ -220,11 +268,9 @@ data class State(
      * Added 2.1, can be used to identify changes to State Thumbnail (e.g. to clear cached thumbnails when a state is changed)
      *
      * Consistent during the lifetime of a single run, but not across restarts
-     *
      */
     val thumbHash: String? = null
 )
-
 
 @Serializable
 data class Entry(
