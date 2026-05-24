@@ -207,13 +207,10 @@ sealed class RequestPayload {
     /**
      * Used for Request Payloads that needs a String Value
      *
-     * @param event the action to be carried out
-     *
      * e.g. [PayloadEvent.SET] (*Set*) will change the State based on the String Provided
      * * A Boolean Node accepts "toggle" or "clear"
      *
-     * @param value String for node, e.g. "toggle" or "clear"
-     *
+     * @param event String for node action, e.g. "toggle" or "clear"
      */
     @Serializable
     data class RequestPayloadEventString(
